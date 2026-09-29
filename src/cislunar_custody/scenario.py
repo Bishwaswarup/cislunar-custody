@@ -38,36 +38,46 @@ def build_measurements(orbit, jd_epoch, start_day, days, *, network="Tri-3+S", t
     return meas, float(t[0]), float(t[-1])
 
 
-def run_filter(filt, x0, P0, t0, meas, orbit, t_end=None):
-    """Process all measurements; one history entry per measurement epoch (after all
+def run_filter(filt, x0, P0, t0, meas, orbit, t_end=None, keep_first_prior=False):
+    """Process all measurements with any filter exposing init / predict_belief /
+    update_belief / moments / size. One history entry per measurement epoch (after all
     updates at that time) plus a final prediction to t_end. Returns a dict with t, x,
-    P, err (vs truth), nees and 'diverged'."""
-    x, P, tc = np.array(x0, float), np.array(P0, float), t0
-    T, X, Ps = [], [], []
+    P, err (vs truth), nees, n_comp and 'diverged'. With keep_first_prior=True the
+    predicted belief just before the first update is returned as 'first_prior'."""
+    b, tc = filt.init(x0, P0), t0
+    T, X, Ps, K = [], [], [], []
+    first_prior = None
     diverged = False
     try:
         for m in meas:
-            x, P = filt.predict(x, P, m.t - tc)
+            b = filt.predict_belief(b, m.t - tc)
+            if keep_first_prior and first_prior is None:
+                first_prior = b
             tc = m.t
-            x, P, _, _ = filt.update(x, P, m)
+            b = filt.update_belief(b, m)
+            x, P = filt.moments(b)
             if not np.all(np.isfinite(x)) or not np.all(np.isfinite(P)):
                 raise FloatingPointError("non-finite state")
             if T and T[-1] == tc:
-                X[-1], Ps[-1] = x, P
+                X[-1], Ps[-1], K[-1] = x, P, filt.size(b)
             else:
                 T.append(tc)
                 X.append(x)
                 Ps.append(P)
+                K.append(filt.size(b))
         if t_end is not None and t_end > tc:
-            x, P = filt.predict(x, P, t_end - tc)
+            b = filt.predict_belief(b, t_end - tc)
+            x, P = filt.moments(b)
             T.append(t_end)
             X.append(x)
             Ps.append(P)
+            K.append(filt.size(b))
     except (RuntimeError, FloatingPointError, np.linalg.LinAlgError, ValueError):
         diverged = True
     if not T:
-        return {"t": np.array([]), "diverged": True}
+        return {"t": np.array([]), "diverged": True, "first_prior": first_prior}
     T, X, Ps = np.array(T), np.array(X), np.array(Ps)
     err = X - orbit.states_at(T)
-    return {"t": T, "x": X, "P": Ps, "err": err,
-            "nees": np.array([nees(e, p) for e, p in zip(err, Ps)]), "diverged": diverged}
+    return {"t": T, "x": X, "P": Ps, "err": err, "n_comp": np.array(K),
+            "nees": np.array([nees(e, p) for e, p in zip(err, Ps)]), "diverged": diverged,
+            "first_prior": first_prior}

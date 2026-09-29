@@ -7,7 +7,7 @@ points are propagated together in one vectorised integration.
 import numpy as np
 
 from ..dynamics.cr3bp import propagate_many
-from .common import AnglesModel, process_noise
+from .common import AnglesModel, process_noise, GaussianBeliefMixin
 
 
 def _sqrt_psd(P):
@@ -18,7 +18,7 @@ def _sqrt_psd(P):
         return V * np.sqrt(np.clip(w, 1e-30, None))
 
 
-class UKF:
+class UKF(GaussianBeliefMixin):
     name = "UKF"
 
     def __init__(self, mu, model: AnglesModel, q_psd_km2_s3=0.0, alpha=1.0, beta=2.0,

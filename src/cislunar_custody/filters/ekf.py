@@ -2,10 +2,10 @@
 import numpy as np
 
 from ..dynamics.cr3bp import propagate
-from .common import AnglesModel, process_noise
+from .common import AnglesModel, process_noise, GaussianBeliefMixin
 
 
-class EKF:
+class EKF(GaussianBeliefMixin):
     name = "EKF"
 
     def __init__(self, mu, model: AnglesModel, q_psd_km2_s3=0.0, rtol=1e-10, atol=1e-12):

@@ -57,6 +57,26 @@ class AnglesModel:
         return d
 
 
+class GaussianBeliefMixin:
+    """Uniform belief interface shared by all filters (EKF/UKF belief = (x, P))."""
+
+    def init(self, x0, P0):
+        return (np.array(x0, float), np.array(P0, float))
+
+    def predict_belief(self, b, dt):
+        return self.predict(b[0], b[1], dt)
+
+    def update_belief(self, b, m):
+        x, P, _, _ = self.update(b[0], b[1], m)
+        return (x, P)
+
+    def moments(self, b):
+        return b
+
+    def size(self, b):
+        return 1
+
+
 def process_noise(dt, mu=None, q_psd_km2_s3=0.0):
     """Discrete process noise for continuous white acceleration of PSD q [km^2/s^3],
     in non-dimensional units, over dt [TU]."""
