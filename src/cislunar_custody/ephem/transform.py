@@ -1,5 +1,5 @@
 """Instantaneous (pulsating, rotating) Earth-Moon frame mapping between CR3BP states and
-geocentric inertial states, using the DE440 Moon (e.g. Park & Howell, 2021):
+geocentric inertial states, using the DE440 Moon (standard instantaneous-frame mapping):
 
     r = d C rho,   v = d_dot C rho + d w (z_hat x C rho) + d w C rho',
 with rho = (x + mu, y, z), rho' = CR3BP velocity, d = |r_moon|, w = |h| / d^2,

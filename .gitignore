@@ -9,3 +9,8 @@ _to_delete/
 data/*.bsp
 data/*.bsp
 Claude outputs/
+paper/*.aux
+paper/*.log
+paper/*.bbl
+paper/*.blg
+paper/*.out

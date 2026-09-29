@@ -1,80 +1,111 @@
 # cislunar-custody
 
-**Custody horizons for ground-based angles-only tracking of cislunar periodic orbits.**
+**Custody horizons for ground-based, angles-only tracking of cislunar periodic orbits.**
 
-How long can an Earth-based optical network lose sight of an object on a halo, NRHO,
-DRO or Lyapunov orbit before it can no longer be reacquired, and can that *custody
-horizon* be predicted from the orbit's local dynamics (FTLE / STM stretching) instead
-of Monte Carlo filter runs?
+Suppose Earth-based optical telescopes track an object on a halo, NRHO, DRO or Lyapunov
+orbit, and then lose it. How long can the object go unobserved before it falls outside the
+telescope search pattern for good? And can that *custody horizon* be predicted without
+Monte Carlo simulation?
 
-Research plan: see the Cislunar Angles-Only Tracking research plan doc.
+Author: Bishwaswarup Nayak (Indian Institute of Science). Code: MIT License. Manuscript draft: `paper/`.
+
+## Headline results
+
+Reference setup: 1 m telescopes at Hanle, La Palma, Haleakala and Siding Spring; 5° Moon
+exclusion; 1″ angle noise; 2 m target (albedo 0.2); search patterns of 1, 10 or 100
+one-degree fields.
+
+| Result | Numbers | Figure |
+| --- | --- | --- |
+| Cislunar targets sit close to the Moon as seen from Earth | L1 halo 3.9–6.1°, L2 Lyapunov 0–7°, 9:2 NRHO 0.5–10°, DRO 0–14° | fig05 |
+| The Moon-exclusion angle matters more than aperture | 10° exclusion: L1/L2 targets never visible; 5°: 21–33 % of the year | fig03 |
+| A lunar-phase blackout is unavoidable | longest gap 8.5–16 d for every network and aperture | fig04 |
+| Tracking accuracy after 7-day arcs (CRLB, reached by the filters) | NRHO ≈ 1 km, L1 halo ≈ 2 km, DRO ≈ 7 km, L2 Lyapunov ≈ 17 km | fig06, fig08 |
+| Reacquisition after a 3.2 d gap (L1 halo): share of consistent runs | EKF 10 %, UKF 70 %, PF→UKF 70 %, GM-UKF 100 % | fig10, fig11 |
+| Custody horizon, 10 fields, after 1 / 3 / 7-day arcs | NRHO and DRO > 30 d; L1 halo 11 / 13 / 17 d; L2 Lyapunov 12 / 15 / 17 d | fig12 |
+| Blackouts survived after 1 / 3 / 7-day arcs (10 fields) | 74–89 % / 96–100 % / 100 % | fig15 |
+| Predicting T_c without Monte Carlo (log R²) | unscented transform 0.86–1.00, linear 0.90–0.98, orbit-only FTLE ≤ 0.03 | fig13 |
+| Linear (EKF-style) prediction gives false custody | L1 halo after 14 d: the linear 99 % ellipse holds 7.6 % of the true mass, the UT ellipse 98 % | fig14 |
+| The results hold in DE440 + SRP dynamics | T_c ratio ephemeris/CR3BP 0.93–1.01; growth curves overlap | fig16, fig17 |
+
+**Operational rules.** Track for at least 3 days (preferably 7) before a predicted
+blackout. Use unscented or Gaussian-mixture prediction, not linear prediction, for gaps
+longer than about a week on unstable orbits.
 
 ## Status
 
-| Milestone | Status |
-| --- | --- |
-| 1. Dynamics + orbit catalogue (CR3BP, STM, families) | ✅ done |
-| 2. Sensor model (visibility, Moon exclusion, photometry) | next |
-| 3. Observability (Fisher information maps) | – |
-| 4. EKF / SR-UKF | – |
-| 5. GM-UKF / particle filter | – |
-| 6. Monte Carlo custody sweep | – |
-| 7. FTLE predictor | – |
-| 8. Ephemeris (DE440) cross-check | – |
-
-## Milestone 1 results (Earth–Moon CR3BP, μ = 0.0121505842)
-
-| Orbit / family | Members | Check |
+| Milestone | What | Status |
 | --- | --- | --- |
-| L1 halo (northern), to L1 NRHOs | 88 | Richardson 3rd-order seed → corrected in 4 iterations |
-| L2 halo (southern), to L2 NRHOs | 140 | continued until perilune < 1,900 km |
-| L1 / L2 Lyapunov | 60 / 60 | stability index 70 to 1,300 (strongly unstable) |
-| DRO | 94 | ν = 1 across the family (linearly stable) |
-| **9:2 NRHO** | – | T = 6.5624 d, perilune 3,249 km, apolune 71,222 km, ν = 1.32 |
-| 4:1 NRHO | – | T = 7.3826 d, perilune 5,750 km, apolune 75,519 km |
+| 1 | CR3BP dynamics, STM, periodic-orbit catalogue | done |
+| 2 | Ground sensor model and one-year visibility | done |
+| 3 | Angles-only observability (Fisher information, CRLB) | done |
+| 4 | EKF and UKF: Monte Carlo consistency, track vs reacquire | done |
+| 5 | GM-UKF and PF→UKF for post-gap reacquisition | done |
+| 6 | Custody horizons (linear / UT / Monte Carlo), predictors, blackouts | done |
+| 7 | DE440 ephemeris + SRP cross-check with multiple-shooting counterparts | done |
+| 8 | Manuscript draft (`paper/`) | draft |
+| — | Real-data validation with Indian observatories (IIA, ARIES, GROWTH-India) | phase 2 |
 
-Verification: the STM agrees with Richardson-extrapolated finite differences to
-3×10⁻¹⁰ (relative), det Φ = 1, the Jacobi constant is conserved to 10⁻¹⁰ over 10 TU, and
-orbits close to within 10⁻⁸ LU.
+## Install and test
 
-![families](figures/fig01_families.png)
-![properties](figures/fig02_family_properties.png)
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev,ephem]"
+curl -o data/de440s.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp
+pytest                                    # 47 tests, ~10 s (ephemeris tests skip without the kernel)
+```
+
+## Reproduce every result (in order)
+
+| Step | Command | Time | Outputs |
+| --- | --- | --- | --- |
+| 1 | `python scripts/build_catalogue.py` | ~15 s | `data/catalogue.npz`, `data/named_orbits.json` |
+| 1 | `python scripts/plot_catalogue.py` | ~5 s | fig01, fig02 |
+| 2 | `python scripts/visibility_study.py` | ~10 s | `data/visibility_summary.csv`, fig03–fig05 |
+| 3 | `python scripts/observability_study.py` | ~10 s | `data/observability_arcs.csv`, fig06, fig07 |
+| 4 | `python scripts/filter_study.py` | ~1 min | `data/filter_summary.csv`, fig08, fig09 |
+| 5 | `python scripts/nonlinear_filter_study.py` | ~1 min | `data/nonlinear_filter_summary.csv`, fig10, fig11 |
+| 6 | `python scripts/custody_study.py` | ~12 min | `data/custody_cases.csv`, fig12–fig15 |
+| 7 | `python scripts/ephemeris_check.py` | ~6 min | `data/ephemeris_check.csv`, fig16, fig17 |
+
+Each script prints its summary tables. Steps 3–7 depend on the catalogue, and steps 4–7
+also read the CSVs from earlier steps.
 
 ## Layout
 
 ```
 src/cislunar_custody/
-  constants.py          GM values (DE440), LU/TU, radii
-  dynamics/cr3bp.py     EOM, Jacobian, STM, Jacobi constant, Lagrange points
-  dynamics/periodic.py  PeriodicOrbit, differential correction, pseudo-arclength continuation
-  dynamics/seeds.py     Richardson halo, linear Lyapunov, DRO initial guesses
-  catalogue.py          build / save / load the family catalogue
-scripts/build_catalogue.py   -> data/catalogue.npz, data/named_orbits.json (~30 s)
-scripts/plot_catalogue.py    -> figures/fig01_families.png, fig02_family_properties.png
-tests/                       pytest suite
+  constants.py, timeutil.py      DE440 GM values, LU/TU, radii; Julian dates
+  dynamics/   cr3bp.py           EOM, STM, Jacobi constant, Lagrange points, vectorised propagation
+              periodic.py        differential correction, pseudo-arclength continuation, PeriodicOrbit
+              seeds.py           Richardson 3rd-order halo, linear Lyapunov, DRO initial guesses
+  catalogue.py                   build / save / load the orbit families (L1/L2 halo, NRHO, Lyapunov, DRO)
+  frames/                        low-precision Sun/Moon, GMST, sites, CR3BP -> inertial mapping
+  sensors/                       sites, telescopes, photometry, Krisciunas-Schaefer sky, visibility, RA/Dec
+  observability/fisher.py        Fisher information and CRLB for real measurement schedules
+  filters/                       EKF, UKF, GM-UKF (entropy-triggered splitting), PF with UKF handover
+  scenario.py                    measurement generation and a filter runner shared by all filters
+  custody/horizon.py             gap propagation (linear / UT / MC), sky metrics, custody horizons
+  ephem/                         DE440 (jplephem), Earth-centred ephemeris + SRP dynamics, exact STM,
+                                 CR3BP <-> inertial transform, multiple shooting (LM + Newton)
+scripts/                         one script per milestone (see table above)
+tests/                           47 pytest tests
+data/, figures/                  generated outputs
+paper/                           LaTeX manuscript (main.tex, references.bib)
 ```
 
-## Quick start
+## Modelling assumptions (stated in the paper)
 
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-pytest                        # 13 tests, ~12 s
-python scripts/build_catalogue.py
-python scripts/plot_catalogue.py
-```
+- Truth and filters share the dynamics. The v1 sky geometry places the CR3BP orbit in the
+  real Earth–Moon direction (analytic Sun and Moon; the DE440 check confirms the results).
+- Telescope limiting magnitudes (19.5 / 21.5 / 23.0 for 0.36 / 1 / 2 m), extinction and
+  dark-sky brightness are nominal assumptions. The first is anchored to LANL's 36 cm
+  detection of CAPSTONE.
+- The post-fit uncertainty at the start of a gap is the CRLB of the preceding arc.
+  Milestone 4 shows that the filters reach it.
+- The NRHO ephemeris counterpart keeps a 50–124 km continuity residual, because
+  perilune conditioning stalls the corrector.
 
-```python
-from cislunar_custody.catalogue import load_named
-nrho = load_named("data/catalogue.npz", "NRHO_9:2")
-t, states = nrho.trajectory(2000)
-M = nrho.monodromy()
-```
+## Citation
 
-## References
-
-- Richardson, D. L. (1980). Analytic construction of periodic orbits about the collinear points. *Celestial Mechanics* 22.
-- Koon, Lo, Marsden & Ross (2011). *Dynamical Systems, the Three-Body Problem and Space Mission Design.*
-- Chow et al. (2021), AMOS; Frueh et al. (2021), AAS 21-290; Iannamorelli & LeGrand (2023), AMOS: see the research plan for the full review.
-
-Author: Bishwaswarup Nayak (IISc). MIT License.
+Manuscript in preparation (see `paper/`). Please contact the author before reusing the results.

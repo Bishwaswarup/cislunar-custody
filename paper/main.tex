@@ -1,0 +1,679 @@
+\documentclass[11pt]{article}
+% Portable manuscript layout. To submit to The Journal of the Astronautical Sciences,
+% move the body into Springer's sn-jnl template (sn-basic style); for AMOS, shorten
+% Sections 5-6 and use the AMOS template.
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{graphicx}
+\usepackage{booktabs,multirow,tabularx}
+\usepackage[authoryear,round]{natbib}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf}
+\graphicspath{{../figures/}}
+
+\newcommand{\Tc}{T_{\mathrm{c}}}
+\newcommand{\vect}[1]{\bm{#1}}
+\newcommand{\todo}[1]{\textcolor{red}{[#1]}}
+
+\title{Custody Horizons for Ground-Based Angles-Only Tracking of Cislunar Periodic Orbits}
+\author{Bishwaswarup Nayak\\
+\small Department of Physics, Indian Institute of Science, Bengaluru 560012, India\\
+\small \texttt{bishwaswarup@iisc.ac.in}}
+\date{Draft, \today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Ground-based optical sensors are the most readily available assets for tracking objects in
+cislunar space, but they lose sight of those objects for days at a time. We quantify how
+long an object on a cislunar periodic orbit can go unobserved before it leaves a telescope
+search pattern, a quantity we call the \emph{custody horizon} $\Tc$. The study covers four
+representative orbits of the Earth--Moon system (the 9:2 southern near-rectilinear halo
+orbit, an $L_1$ northern halo, an $L_2$ planar Lyapunov orbit and a distant retrograde
+orbit) and a four-site network of 1\,m-class telescopes over one year. Seen from Earth,
+these targets stay within 4--14$^\circ$ of the Moon. As a result, the Moon-exclusion angle
+controls visibility more than telescope aperture does, and every orbit and network suffers a
+lunar-phase blackout of 8.5--16\,days. Seven-day tracking arcs reach 1--17\,km position
+uncertainty (Cram\'er--Rao bound), which EKF and UKF filters attain. After a 3.2-day gap,
+however, the EKF reacquires consistently in only 10\,\% of runs, compared with 100\,\% for
+a Gaussian-mixture UKF. Propagating post-fit covariances through gaps of up to 30\,days with
+linear, unscented and Monte Carlo methods shows that custody lasts beyond 30\,days for the
+NRHO and the DRO. The unstable $L_1$ halo and $L_2$ Lyapunov orbits lose custody after
+11--17\,days, depending mainly on how long the object was tracked before the gap: after
+1-, 3- and 7-day arcs, 74--89\,\%, 96--100\,\% and 100\,\% of blackouts are survived with a
+ten-field search. The horizon is predicted almost exactly (log-$R^2 = 1.00$) by the
+unscented transform of the post-fit covariance, using 13 sigma points instead of Monte
+Carlo, but not by the orbit's finite-time Lyapunov exponent alone ($R^2 < 0.05$). Linear
+(EKF-style) predictions give false custody: after 14 days on the $L_1$ halo their 99\,\%
+ellipse contains only 8--16\,\% of the true probability. These conclusions hold within
+0.93--1.01 in a DE440 ephemeris model with solar radiation pressure, in which the orbits
+are transitioned by multiple shooting.
+\end{abstract}
+
+\noindent\textbf{Keywords:} cislunar space domain awareness; angles-only orbit determination;
+near-rectilinear halo orbit; uncertainty propagation; Gaussian mixture filter; custody
+
+%=====================================================================
+\section{Introduction}
+\label{sec:intro}
+
+Traffic beyond geosynchronous orbit is growing: lunar orbiters, the Gateway's 9:2
+near-rectilinear halo orbit (NRHO), and spacecraft in libration-point and distant
+retrograde orbits. Keeping track of these objects (\emph{custody}) is harder than in near-Earth
+space for three reasons. The targets are faint and 380\,000\,km away. Seen from Earth, they
+sit close to the brightest object in the night sky. And their dynamics are governed by the
+Earth--Moon three-body problem, which stretches uncertainty rapidly and turns it
+non-Gaussian \citep{frueh2021}.
+
+Ground-based optical telescopes are the most accessible sensors for this task.
+\citet{sechrest2024} detected CAPSTONE at $g \approx 19.6$ and Orion at $g \approx 15.5$ with
+36\,cm telescopes. But ground sensors see cislunar objects only intermittently: daylight,
+the Moon's glare and the lunar phase open and close observation windows. Earlier work has
+shown that filters survive or fail across particular gaps on particular trajectories
+\citep{chow2021,iannamorelli2023}. What is missing is a general answer to the operational
+question: \emph{how long can a cislunar object go unobserved before it cannot be found
+again, and what determines that time?}
+
+This paper answers that question for ground-based, angles-only tracking of periodic orbits.
+Its contributions are:
+\begin{enumerate}
+\item A physically generated observation model (sites, twilight, Moon exclusion and
+      occultation, shadows, photometry with scattered moonlight). It shows that cislunar
+      targets sit within 4--14$^\circ$ of the Moon and that a lunar-phase blackout of
+      8.5--16\,days is unavoidable (Section~\ref{sec:vis}).
+\item A definition of the \emph{custody horizon} $\Tc$ as the longest gap after which 99\,\%
+      of the true probability mass still lies inside a telescope search pattern. We give maps
+      of $\Tc$ across orbits, tracking-arc lengths and search sizes (Section~\ref{sec:custody}).
+\item Evidence that $\Tc$ can be predicted without Monte Carlo from the stretching of the
+      post-fit covariance (unscented transform, log-$R^2 = 1.00$), but not from the orbit's
+      finite-time Lyapunov exponent alone (Section~\ref{sec:predict}).
+\item A quantification of when the filter choice matters. EKF-style linear prediction gives
+      false custody after about one week on unstable orbits, and a Gaussian-mixture UKF
+      reacquires reliably where the EKF fails (Sections~\ref{sec:filters} and~\ref{sec:predict}).
+\item A cross-check in a DE440 ephemeris model with solar radiation pressure, using
+      multiple-shooting ephemeris counterparts of the orbits (Section~\ref{sec:ephem}).
+\end{enumerate}
+
+%=====================================================================
+\section{Related Work}
+\label{sec:related}
+
+\citet{chow2021,chow2022} processed ground-based angles-only and photometric observations
+from three sites for 15 periodic orbits. They found that Gaussian-mixture filters retain
+custody across data gaps where a UKF fails, and that two-body models lose the object after
+the first gap. Their gaps, however, were produced by decimating the data rather than by
+physical visibility. \citet{frueh2021} showed that even a global ground network leaves periods
+with no visibility because of lunar brightness, and that cislunar uncertainty develops
+strongly curved, non-Gaussian structure. For space-based observers, \citet{iannamorelli2023,iannamorelli2024}
+kept custody of a manoeuvring Artemis-like target across gaps of 1.7 and 2.6\,days with an
+adaptive Gaussian-mixture interacting-multiple-model filter, in 247 of 250 Monte Carlo trials.
+For initial orbit determination, \citet{jo2025} developed a three-body differential-correction
+method for angles-only data and reviewed the alternatives, including Gauss/Laplace
+extensions, particle-swarm, sparse-grid and admissible-region approaches. For observer
+placement, \citet{wilmer2022} studied NRHO surveillance from cislunar periodic orbits.
+
+On the estimation side, we build on the unscented transform \citep{julier2004,wan2000},
+entropy-triggered Gaussian-mixture splitting \citep{demars2013}, and regularised particle
+filtering with progressive correction \citep{oudjane2000,musso2001}. Consistency is assessed
+with the normalised estimation error squared (NEES) \citep{barshalom2001}. The dynamical
+tools are standard CR3BP methods \citep{szebehely1967,koon2011}: Richardson's third-order
+halo approximation \citep{richardson1980}, differential correction and pseudo-arclength
+continuation. The finite-time Lyapunov exponent (FTLE) \citep{shadden2005} is the natural
+candidate for predicting how fast knowledge decays, and we test it directly.
+
+%=====================================================================
+\section{Models}
+\label{sec:models}
+
+\subsection{Dynamics and orbit catalogue}
+Motion is modelled in the Earth--Moon circular restricted three-body problem (CR3BP), in
+the barycentric rotating frame with the Earth at $(-\mu,0,0)$ and the Moon at $(1-\mu,0,0)$:
+\begin{equation}
+\ddot x - 2\dot y = \frac{\partial\Omega}{\partial x},\quad
+\ddot y + 2\dot x = \frac{\partial\Omega}{\partial y},\quad
+\ddot z = \frac{\partial\Omega}{\partial z},\qquad
+\Omega = \tfrac12(x^2+y^2) + \frac{1-\mu}{r_1} + \frac{\mu}{r_2},
+\end{equation}
+with $\mu = 0.0121505842$ (from DE440 gravitational parameters), a length unit of 384\,400\,km and a
+time unit of 4.3425\,days. The state transition matrix (STM) $\Phi(t,t_0)$ is integrated
+with the variational equations using an eighth-order Runge--Kutta method \citep{hairer1993,virtanen2020}.
+It agrees with Richardson-extrapolated finite differences to $3\times10^{-10}$.
+
+Symmetric periodic orbits are computed by single-shooting differential correction and
+continued by pseudo-arclength continuation. Halo families are seeded with Richardson's
+third-order solution and converge in four iterations. Five families are built: the $L_1$
+northern halo (88 members), the $L_2$ southern halo down to the NRHOs (140), the $L_1$ and
+$L_2$ Lyapunov families (60 each) and the DRO family (94) (Fig.~\ref{fig:families}). The 9:2
+synodic-resonant NRHO is found by period targeting. It has a period of 6.5624\,d, perilune
+and apolune radii of 3249 and 71\,222\,km, and a stability index of 1.32, all consistent with
+\citet{zimovan2020}. Four representative orbits are used throughout: the 9:2 NRHO, an $L_1$
+halo with $A_z \approx 30\,000$\,km, a mid-family $L_2$ Lyapunov orbit, and a DRO whose
+closest approach to the Moon is about 70\,000\,km.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig01_families.png}
+\caption{Earth--Moon CR3BP families used in this study (12 members each); the thick black
+curve is the 9:2 southern NRHO.}
+\label{fig:families}
+\end{figure}
+
+\subsection{Sky geometry}
+To give the sky geometry real dates, the CR3BP trajectory is placed in the instantaneous
+Earth--Moon frame of the actual Moon. The frame's $\hat x$ axis points from Earth to Moon, its
+$\hat z$ axis lies along the Moon's orbital angular momentum, and distances scale with the
+constant length unit. The Sun and Moon come from low-precision analytic series
+\citep{montenbruck2000}, and Earth rotation from GMST. The Moon used in every geometric test
+is the mapped CR3BP Moon, so the target--Moon geometry is exactly the CR3BP one. Truth,
+filters and predictors share this mapping, so the setup is self-consistent. Section~\ref{sec:ephem}
+replaces it with DE440 \citep{park2021}. The reference epoch is 2027-01-01\,UTC and the grid
+spacing is 10\,min.
+
+\subsection{Sensors and visibility}
+The network consists of Hanle (India), La Palma (Spain), Haleakala (USA) and Siding Spring
+(Australia), in subsets of one site (India-1), three sites (Tri-3) and four sites
+(Tri-3+S). An observation is possible only if all of the following hold: the Sun is below
+$-18^\circ$; the target is above $20^\circ$ elevation; the line of sight misses the Moon; the
+target is outside Earth's and the Moon's (cylindrical) shadows; the target is more than
+$\theta_{\mathrm{m}}$ from the Moon; and the target is brighter than the effective limiting
+magnitude. The target is a Lambertian sphere of radius 1\,m and albedo 0.2 (magnitude
+18.4 at zero phase at the Moon's distance). The limiting magnitude is degraded by scattered
+moonlight following \citet{krisciunas1991}, and extinction is applied. Dark-sky limiting
+magnitudes of 19.5, 21.5 and 23.0 are assumed for 0.36, 1 and 2\,m apertures. The 0.36\,m
+value is anchored to the CAPSTONE detection of \citet{sechrest2024}.
+Measurements are topocentric right ascension and declination with 1$''$ noise.
+
+\subsection{Estimators}
+\label{sec:estimators}
+Four filters share one measurement model:
+\begin{itemize}
+\item an EKF, with STM covariance propagation and Joseph-form updates;
+\item a UKF (13 scaled sigma points, $\alpha=1$, $\beta=2$, $\kappa=0$);
+\item a Gaussian-mixture UKF (GM-UKF). A component is split when its unscented prediction
+      raises the differential entropy of its Gaussian fit by more than 0.02\,nats \citep{demars2013}.
+      The flow preserves volume, so any entropy gain comes from nonlinear bending. The split
+      is a moment-preserving three-way split along the direction of maximum stretching (the
+      top right-singular vector of the statistically linearised flow times the Cholesky factor
+      of the covariance). Pruning and Mahalanobis merging keep the mixture small.
+\item a regularised bootstrap particle filter with progressive correction
+      \citep{oudjane2000,musso2001}. It hands over to a UKF once its position uncertainty
+      falls below 50\,km. Without the handover, a finite particle set impoverishes on long, dense
+      arcs, and its covariance drops below the Cram\'er--Rao bound.
+\end{itemize}
+The truth has no process noise. The filters carry a small white acceleration noise with
+power spectral density $10^{-18}$\,km$^2$\,s$^{-3}$.
+
+%=====================================================================
+\section{Custody Horizon: Definition and Computation}
+\label{sec:custody-def}
+
+Let $(\hat{\vect x}_0, P_0)$ be the post-fit estimate at the last measurement before a
+gap. For gap lengths $\Delta t \in [0.1, 30]$\,d, the uncertainty is propagated three ways:
+\begin{itemize}
+\item \emph{linear}: $P(\Delta t) = \Phi P_0 \Phi^\top$, which is what an EKF predicts;
+\item \emph{unscented} (UT): 13 sigma points, which is what a UKF predicts;
+\item \emph{Monte Carlo} (MC): samples of $\mathcal N(\hat{\vect x}_0, P_0)$ through the full
+      dynamics, used as the reference.
+\end{itemize}
+The samples are projected onto the geocentric sky. With a search pattern of $N$ square fields of view of
+side $\phi$, whose equal-area radius is $r_N = \phi\sqrt{N/\pi}$, the custody horizon is
+\begin{equation}
+\Tc(N) = \max\left\{\Delta t : \Pr\left[\angle(\hat{\vect u}_{\mathrm{target}}, \hat{\vect c}) \le r_N\right] \ge 0.99\right\},
+\end{equation}
+where $\hat{\vect c}$ is the centre of the search. Three variants use different centres or
+radii:
+\begin{itemize}
+\item \emph{ideal}: the circle is centred on the true (MC) mean direction;
+\item \emph{actual}: the circle is centred on a method's own predicted direction;
+\item \emph{claimed}: the time at which a method's \emph{own} 99\,\% region outgrows $r_N$.
+\end{itemize}
+A claimed horizon longer than the actual one is \emph{false custody}: the predictor believes
+the target is still inside the pattern after it has left. We use $\phi = 1^\circ$ and
+$N \in \{1, 10, 100\}$, which give search radii of 0.56$^\circ$, 1.78$^\circ$ and 5.64$^\circ$.
+We also report Gaussian \emph{containment}, the share of MC samples inside a method's 99\,\%
+sky ellipse (ideal value 99\,\%).
+
+The post-fit covariance at the gap start is the Cram\'er--Rao lower bound of the preceding
+tracking arc of 1, 3 or 7\,days:
+\begin{equation}
+\mathcal I(t_0) = \sum_k \Phi(t_k,t_0)^\top H_k^\top R^{-1} H_k \Phi(t_k,t_0),\qquad
+P_0 = \Phi(t_e,t_0)\,\mathcal I^{-1}\,\Phi(t_e,t_0)^\top ,
+\end{equation}
+built from the actual visible measurements, with the gap starting at the arc's last
+measurement. Section~\ref{sec:filters} shows that the filters reach this bound. Two scenarios
+are studied: arcs ending every 15\,days through the year (\emph{phase}), and arcs ending
+exactly when a blackout of 2 days or more begins (\emph{blackout}). This gives 525 cases.
+
+We also test a purely dynamical predictor: $\hat T_{\mathrm{FTLE}}$ is the first $\Delta t$ at which
+the largest singular value of $\Phi$, $s_{\max}(\Phi(\Delta t)) = e^{\sigma_{\Delta t}\Delta t}$,
+reaches $r_N/\theta_0$, where $\theta_0$ is the initial 99\,\% sky radius and $\sigma_{\Delta t}$ is the FTLE
+\citep{shadden2005}.
+
+%=====================================================================
+\section{Visibility: the Moon and the Lunar Phase Dominate}
+\label{sec:vis}
+
+Seen from Earth, the four targets stay close to the Moon (Fig.~\ref{fig:sep}). The $L_1$ halo
+stays within 3.9--6.1$^\circ$ and the $L_2$ Lyapunov orbit within 0--7.0$^\circ$. The NRHO ranges
+over 0.5--10.0$^\circ$ and spends most of its time near apolune, at about 10$^\circ$. The DRO
+ranges over 0--13.9$^\circ$. The Moon-exclusion angle is therefore the dominant sensor
+parameter (Table~\ref{tab:vis}). With a 10$^\circ$ exclusion, the $L_1$ and $L_2$ targets are
+never observable, whereas at 5$^\circ$ they are observable 21--33\,\% of the year. Doubling
+the aperture from 1 to 2\,m changes the visible fraction by only 0.3--1.6 percentage points.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig05_moon_separation.png}
+\caption{Geocentric angular separation between each target and the Moon: 60-day time series
+(left) and distribution over one year (right). Dashed lines mark the exclusion angles studied.}
+\label{fig:sep}
+\end{figure}
+
+\begin{table}[t]
+\centering\small
+\caption{One year of visibility (1\,m telescopes, Tri-3+S network): share of time observable
+and longest observation gap, by Moon-exclusion angle.}
+\label{tab:vis}
+\begin{tabular}{lcccccc}
+\toprule
+ & \multicolumn{2}{c}{$\theta_{\mathrm m}=2^\circ$} & \multicolumn{2}{c}{$5^\circ$} & \multicolumn{2}{c}{$10^\circ$}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+Orbit & visible & max gap & visible & max gap & visible & max gap\\
+\midrule
+9:2 NRHO      & 37.5\,\% & 12.8\,d & 31.4\,\% & 13.2\,d & 4.5\,\%  & 19.5\,d\\
+$L_1$ halo    & 42.7\,\% & 11.2\,d & 32.6\,\% & 11.9\,d & 0\,\%    & ---\\
+$L_2$ Lyapunov& 32.7\,\% & 13.5\,d & 20.6\,\% & 14.5\,d & 0\,\%    & ---\\
+DRO           & 38.0\,\% & 11.8\,d & 32.5\,\% & 11.9\,d & 21.2\,\% & 16.5\,d\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Visibility arrives in windows that run from roughly first quarter to last quarter
+(Fig.~\ref{fig:timeline}). Near new Moon the target lies close to the Sun on the sky and is
+up only in daylight. Near full Moon the exclusion angle and the scattered moonlight bite.
+Gap lengths have three regimes (Fig.~\ref{fig:gaps}): handovers between sites (under
+0.4\,d), diurnal gaps of about 1\,d, which dominate for a single site, and monthly blackouts
+of 3--15\,d. Adding sites or aperture removes short gaps but never the monthly blackout. The
+longest gap is 8.5--16\,d in every network--aperture--orbit combination at 5$^\circ$.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig03_visibility_timeline.png}
+\caption{First blocking constraint per site for the 9:2 NRHO over 60 days (1\,m, 5$^\circ$
+exclusion). The bottom row shows network availability.}
+\label{fig:timeline}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig04_gap_cdf.png}
+\caption{Distribution of observation gaps over one year (1\,m, 5$^\circ$) for the three networks.}
+\label{fig:gaps}
+\end{figure}
+
+%=====================================================================
+\section{Observability and Filter Performance}
+\label{sec:filters}
+
+\paragraph{Cram\'er--Rao bounds.} Figure~\ref{fig:crlb} shows the bound, computed from the
+actual measurement schedule, for arcs starting every 2 days. At the end of 7-day arcs the
+median worst-direction position uncertainty is 1.12\,km (NRHO), 1.74\,km ($L_1$ halo),
+6.87\,km (DRO) and 17.1\,km ($L_2$ Lyapunov). The corresponding velocity uncertainties are
+6--100\,mm\,s$^{-1}$. Between 75\,\% and 84\,\% of 7-day arcs fully determine the orbit. For
+the DRO and the Lyapunov orbit, the weakest direction lies within 7--8$^\circ$ (median) of the
+line of sight, i.e.\ it is range. For the NRHO and the halo it is spread more widely
+(median 13--18$^\circ$), because the strongly curved dynamics over a week also constrain range.
+Arcs that end inside a blackout show the uncertainty growth that motivates the rest of the paper.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig06_crlb_vs_date.png}
+\caption{Cram\'er--Rao bound on the worst-direction position uncertainty at the end of 3-day
+and 7-day arcs, against the arc start date. Shading shows lunar illumination; gaps are arcs
+that are not observable.}
+\label{fig:crlb}
+\end{figure}
+
+\paragraph{Tracking.} When the filters are started at the first measurement of the arc
+(from a 1000\,km / 10\,m\,s$^{-1}$ prior), both the EKF and the UKF converge to the bound, as
+Table~\ref{tab:filters} shows for 20 Monte Carlo runs per orbit. The averaged NEES is close
+to the ideal value of 6. The NRHO's value of 4.4--4.5 is slightly conservative, because the
+filters carry process noise that the truth lacks. The EKF begins to lose consistency only on
+the unstable orbits.
+
+\paragraph{Reacquisition after a gap.} In the $L_1$ halo arc the first measurement arrives
+3.2\,d after the prior epoch. By then the 1000\,km prior has stretched into a curved cloud of
+about $40\,000 \times 12\,000$\,km (Fig.~\ref{fig:cloud}). Only 10\,\% of EKF runs end
+consistent, with errors of up to 562\,km while the filter claims about 2\,km. The
+UKF reaches 70\,\%. The GM-UKF reaches 100\,\% (with a maximum error of 2.4\,km), splitting
+into up to 25 components along the stretching direction and averaging 3.1 components over
+the arc. The particle filter with UKF handover reaches 70\,\% (Fig.~\ref{fig:reacq}). The
+single-Gaussian 99\,\% ellipsoids still contain 96--98\,\% of the particles at the first
+measurement. At this gap length the EKF therefore fails mainly in the \emph{measurement
+update}, which linearises the angles across a 10$^4$\,km cloud, rather than in the prediction.
+
+\begin{table}[t]
+\centering\small
+\caption{Filter performance on 7-day arcs. Tracking: 20 runs, prior at the first
+measurement. Reacquisition ($L_1$ halo, 3.2\,d initial gap): 10 runs, prior at the arc start.
+``Consistent'' means the final NEES is below $\chi^2_{0.99}(6)$.}
+\label{tab:filters}
+\begin{tabular}{llcccc}
+\toprule
+\multicolumn{6}{l}{\emph{Tracking}}\\
+Orbit & CRLB [km] & EKF error [km] & EKF ANEES & UKF error [km] & UKF ANEES\\
+\midrule
+9:2 NRHO       & 1.13  & 1.10  & 4.51 & 1.08  & 4.40\\
+$L_1$ halo     & 1.74  & 2.33  & 9.12 & 2.10  & 7.66\\
+$L_2$ Lyapunov & 17.60 & 15.25 & 6.35 & 15.15 & 6.31\\
+DRO            & 6.95  & 6.88  & 6.23 & 6.93  & 6.25\\
+\midrule
+\multicolumn{6}{l}{\emph{Reacquisition, $L_1$ halo}}\\
+Filter & consistent & median error [km] & max error [km] & ANEES & time/run [s]\\
+\midrule
+EKF         & 10\,\%  & 15.6 & 561.8 & $4.1\times10^4$ & 0.1\\
+UKF         & 70\,\%  & 1.92 & 241.9 & $6.2\times10^3$ & 0.1\\
+GM-UKF      & 100\,\% & 1.14 & 2.4   & 7.5             & 0.2\\
+PF$\to$UKF  & 70\,\%  & 1.15 & 4.4   & 11.5            & 0.3\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig10_prior_cloud.png}
+\caption{$L_1$ halo: predicted uncertainty at the first measurement after a 3.2-day gap.
+Particles, EKF/UKF 3$\sigma$ ellipses and GM-UKF components (1$\sigma$) are shown relative to
+the truth.}
+\label{fig:cloud}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.75\textwidth]{fig11_reacquisition_success.png}
+\caption{Share of reacquisition runs ending consistent, by filter and orbit.}
+\label{fig:reacq}
+\end{figure}
+
+%=====================================================================
+\section{Custody Horizons}
+\label{sec:custody}
+
+Figure~\ref{fig:growth} shows how the true 99\,\% sky radius grows after 7-day arcs. The
+NRHO and DRO stay below 0.01$^\circ$ for 30 days, reflecting their near-stability. The $L_1$
+halo and $L_2$ Lyapunov orbits grow roughly exponentially after about 5 days and cross the
+search radii at 13--20 days. Because the growth is so steep, enlarging the search from 10 to
+100 fields gains only 2--4 days (Table~\ref{tab:tc}). The length of the tracking arc matters
+more: the $L_1$ halo's median horizon rises from 10.9 to 16.5\,d (10 fields) as the arc
+grows from 1 to 7 days.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\textwidth]{fig12_uncertainty_growth.png}
+\caption{Growth of the true (Monte Carlo) 99\,\% sky radius after 7-day arcs: median and
+10--90\,\% band over the year. Dashed lines are the search radii for 1, 10 and 100 one-degree fields.}
+\label{fig:growth}
+\end{figure}
+
+\begin{table}[t]
+\centering\small
+\caption{Custody horizon $\Tc$ [days], median (10th--90th percentile) over arcs through the
+year (phase scenario, ideal horizon). ``$>$30'' means beyond the 30-day grid.}
+\label{tab:tc}
+\begin{tabular}{llcccc}
+\toprule
+Orbit & arc & $\sigma_0$ [km] & $N=1$ & $N=10$ & $N=100$\\
+\midrule
+9:2 NRHO       & 1\,d & 23.8 & $>$30 (17.2--$>$30) & $>$30 (18.2--$>$30) & $>$30\\
+               & 3, 7\,d & 3.9, 0.9 & $>$30 & $>$30 & $>$30\\
+$L_1$ halo     & 1\,d & 20.0 & 8.8 (5.5--10.0)  & 10.9 (7.3--11.6)  & 13.1 (9.6--13.7)\\
+               & 3\,d & 5.1  & 11.7 (8.0--12.4) & 13.2 (10.2--14.3) & 15.1 (13.4--17.0)\\
+               & 7\,d & 0.7  & 14.4 (13.1--15.2) & 16.5 (14.6--18.4) & 18.4 (16.6--19.7)\\
+$L_2$ Lyapunov & 1\,d & 30.2 & 9.5 (7.7--11.2)  & 12.4 (9.9--15.3)  & 16.0 (13.1--18.4)\\
+               & 3\,d & 15.5 & 10.5 (9.1--13.4) & 14.9 (11.2--16.3) & 18.3 (15.6--19.0)\\
+               & 7\,d & 7.0  & 13.8 (12.3--15.7) & 16.7 (15.5--18.4) & 19.2 (18.3--21.3)\\
+DRO            & 1\,d & 31.8 & $>$30 (7.8--$>$30) & $>$30 & $>$30\\
+               & 3, 7\,d & 11.7, 1.4 & $>$30 & $>$30 & $>$30\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Blackouts.} The operational question is whether custody survives the blackouts
+that actually occur. Figure~\ref{fig:blackout} and Table~\ref{tab:blackout} compare $\Tc$ with
+every blackout of 2 days or more in the year. After 7-day arcs, every blackout is survived with a
+ten-field search. After 1-day arcs, 11--26\,\% of the blackouts are lost for the $L_1$ and
+$L_2$ targets, and 22\,\% for the NRHO, whose blackouts last about 10.5\,d. The rule that
+follows is to track for at least 3 and preferably 7 days before a predicted blackout.
+
+\begin{table}[t]
+\centering\small
+\caption{Blackouts ($\ge$2\,d) survived, i.e.\ ideal $\Tc \ge$ blackout length, by tracking-arc length.}
+\label{tab:blackout}
+\begin{tabular}{llcccccc}
+\toprule
+Orbit & arc & $n$ & median length & $N=1$ & $N=10$ & $N=100$ & UT-centred, $N=10$\\
+\midrule
+9:2 NRHO       & 1\,d & 9  & 10.5\,d & 78\,\% & 78\,\%  & 78\,\%  & 78\,\%\\
+               & 3\,d & 11 & 10.5\,d & 100\,\% & 100\,\% & 100\,\% & 100\,\%\\
+               & 7\,d & 11 & 10.5\,d & 100\,\% & 100\,\% & 100\,\% & 100\,\%\\
+$L_1$ halo     & 1\,d & 27 & 3.1\,d  & 67\,\% & 89\,\%  & 93\,\%  & 89\,\%\\
+               & 3\,d & 27 & 3.1\,d  & 93\,\% & 96\,\%  & 96\,\%  & 96\,\%\\
+               & 7\,d & 28 & 3.1\,d  & 100\,\% & 100\,\% & 100\,\% & 100\,\%\\
+$L_2$ Lyapunov & 1\,d & 34 & 4.1\,d  & 65\,\% & 74\,\%  & 94\,\%  & 74\,\%\\
+               & 3\,d & 34 & 4.1\,d  & 79\,\% & 97\,\%  & 97\,\%  & 97\,\%\\
+               & 7\,d & 34 & 4.1\,d  & 91\,\% & 100\,\% & 100\,\% & 100\,\%\\
+DRO            & 1\,d & 13 & 11.3\,d & 54\,\% & 85\,\%  & 85\,\%  & 85\,\%\\
+               & 3\,d & 13 & 11.3\,d & 100\,\% & 100\,\% & 100\,\% & 100\,\%\\
+               & 7\,d & 13 & 11.3\,d & 100\,\% & 100\,\% & 100\,\% & 100\,\%\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.7\textwidth]{fig15_blackout_survival.png}
+\caption{Custody horizon (10 fields) against blackout length. Points above the diagonal
+survive the blackout; marker shape shows the tracking-arc length.}
+\label{fig:blackout}
+\end{figure}
+
+%=====================================================================
+\section{Predicting the Custody Horizon, and False Custody}
+\label{sec:predict}
+
+Can $\Tc$ be predicted without Monte Carlo? Figure~\ref{fig:predict} compares the Monte Carlo
+horizon with two cheap predictors. The \emph{orbit-only} FTLE predictor fails, with log-$R^2$
+between $-0.22$ and $0.03$. The \emph{covariance-weighted} predictors succeed. The UT
+predictor reaches $R^2 = 0.98$, $1.00$ and $0.86$ for $N = 1$, 10 and 100, and the linear
+predictor reaches 0.98, 0.90 and 0.95. The FTLE measures stretching along the flow's most
+unstable direction, but the post-fit covariance is highly anisotropic: angles-only data
+constrain some directions far better than others, and only the uncertain directions that
+project onto the sky matter for the search. Predicting custody requires the growth of the
+\emph{actual} covariance, which the unscented transform supplies from 13 sigma points instead
+of hundreds of samples.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig13_tc_predictor.png}
+\caption{Monte Carlo custody horizon against the orbit-only FTLE predictor (left) and the
+UT-predicted covariance (right), for 10 fields.}
+\label{fig:predict}
+\end{figure}
+
+Linear prediction is adequate for about a week but then breaks down on unstable orbits
+(Fig.~\ref{fig:contain}). After 14 days, the $L_1$ halo's linear 99\,\% sky ellipse contains
+only 7.6\,\% of the true probability mass (median), while the UT ellipse contains 98\,\%. A
+linear predictor used to plan the search would therefore point the telescopes at the wrong
+part of the sky. For all orbits the UT never produced false custody at $N = 10$.
+Beyond about 15 days, even the UT ellipse loses containment, falling to 70--80\,\%. The
+recovery near 30 days is an artefact of the small-angle projection once the distribution
+covers tens of degrees, long after custody is lost.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\textwidth]{fig14_gaussian_containment.png}
+\caption{Share of the true probability mass inside the linear (dotted) and UT (solid) 99\,\%
+sky ellipses, against gap length (median over arcs). The ideal value is 99\,\%.}
+\label{fig:contain}
+\end{figure}
+
+%=====================================================================
+\section{Ephemeris Cross-Check}
+\label{sec:ephem}
+
+The CR3BP results are checked in an Earth-centred ephemeris model with DE440 Sun and Moon
+point masses \citep{park2021} and cannonball solar radiation pressure (area-to-mass ratio
+0.01\,m$^2$\,kg$^{-1}$, $C_r = 1.3$, cylindrical Earth shadow). Each orbit is first
+transitioned to its ephemeris counterpart by multiple shooting over 45-day windows. Patch
+points are placed every 0.1 periods and corrected by Levenberg--Marquardt followed by
+minimum-norm Newton iterations, with STMs from the gravity-gradient variational equations.
+Plain minimum-norm Newton diverged, or wandered by up to $10^5$\,km, across NRHO perilune
+passages. The $L_1$ halo, $L_2$ Lyapunov and DRO counterparts are continuous to better than
+0.4\,m and stay within 3500--5200\,km (median) of their CR3BP shapes. The NRHO counterpart
+retains a continuity residual of 50--124\,km, because the corrector stalls in the
+ill-conditioned perilune segments. We report this as a limitation. For 60 custody cases
+(blackout and phase scenarios, 1- and 7-day arcs), the CRLB covariance is mapped to inertial
+coordinates and propagated in the ephemeris model.
+
+The conclusions carry over (Figs.~\ref{fig:ephem} and~\ref{fig:ephemgrowth},
+Table~\ref{tab:ephem}). The median ratio of ephemeris to CR3BP horizon is 0.93--1.01, and the
+growth curves overlap; 3 of 60 cases are outliers, where local differences in the ephemeris
+dynamics shift $\Tc$ by several days. Blackout survival is unchanged except for two
+single-case differences within four-case groups. The UT predictor again reaches $R^2 = 1.00$
+for $N = 1$ and 10, but only 0.68 for $N = 100$: at a search radius of about 5.6$^\circ$ the
+distribution is too curved for any single Gaussian. Linear false custody becomes \emph{worse}.
+At 14 days the linear ellipse holds 15.5\,\% of the mass for the $L_1$ halo and 70.8\,\% for
+the $L_2$ Lyapunov orbit (98.9\,\% in the CR3BP), while the UT ellipse holds 97--99\,\%.
+
+\begin{table}[t]
+\centering\small
+\caption{Ephemeris (DE440 + SRP) versus CR3BP: median custody horizon (10 fields) and median
+ratio, by tracking-arc length.}
+\label{tab:ephem}
+\begin{tabular}{llcccc}
+\toprule
+Orbit & arc & $n$ & CR3BP $\Tc$ & ephemeris $\Tc$ & ratio\\
+\midrule
+9:2 NRHO       & 1\,d & 8  & $>$30\,d & $>$30\,d & 0.98\\
+               & 7\,d & 7  & $>$30\,d & $>$30\,d & ---\\
+$L_1$ halo     & 1\,d & 4  & 8.5\,d   & 7.8\,d   & 0.93\\
+               & 7\,d & 11 & 16.0\,d  & 15.9\,d  & 1.01\\
+$L_2$ Lyapunov & 1\,d & 6  & 12.4\,d  & 11.3\,d  & 0.95\\
+               & 7\,d & 9  & 15.9\,d  & 16.4\,d  & 0.99\\
+DRO            & 1\,d & 6  & $>$30\,d & $>$30\,d & 1.00\\
+               & 7\,d & 9  & $>$30\,d & $>$30\,d & ---\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\begin{minipage}{0.47\textwidth}\centering
+\includegraphics[width=\textwidth]{fig16_tc_cr3bp_vs_ephemeris.png}
+\caption{Custody horizon in the CR3BP and in the ephemeris model (10 fields).}
+\label{fig:ephem}
+\end{minipage}\hfill
+\begin{minipage}{0.5\textwidth}\centering
+\includegraphics[width=\textwidth]{fig17_growth_cr3bp_vs_ephemeris.png}
+\caption{Median sky-radius growth after 7-day arcs: CR3BP (dashed) and ephemeris (solid).}
+\label{fig:ephemgrowth}
+\end{minipage}
+\end{figure}
+
+%=====================================================================
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{Operational rules.} Four rules follow from the results.
+\begin{enumerate}
+\item Sensor design for cislunar tracking from the ground should minimise the usable
+      Moon-exclusion angle (baffling, scattered-light rejection) before increasing aperture.
+\item The monthly lunar-phase blackout cannot be closed by adding ground sites. Custody
+      through it depends on the post-fit covariance, so tasking should concentrate at least
+      3--7\,days of tracking before each predicted blackout.
+\item Search planning after a gap should use unscented (or Gaussian-mixture) prediction.
+      Linear prediction is safe only for gaps shorter than about a week on unstable orbits.
+\item Reacquisition after a long gap should use a Gaussian-mixture filter, which costs about
+      twice as much as a UKF and was the only filter to reacquire every run.
+\end{enumerate}
+Because the UT predictor tracks the Monte Carlo horizon with $R^2 = 1.00$ at $N \le 10$, it can be
+evaluated on board a tasking scheduler for every catalogued object at negligible cost.
+
+\paragraph{Limitations.}
+\begin{itemize}
+\item The post-fit covariance is the Cram\'er--Rao bound, which the filters reach in tracking
+      but not always immediately after a gap.
+\item Sensor parameters (limiting magnitudes, extinction, dark-sky brightness) are nominal.
+      The moonlight model of \citet{krisciunas1991} is extrapolated below 10$^\circ$ from the
+      Moon, and the exclusion angle stands in for instrument-specific scattered light.
+\item Targets are passive, non-manoeuvring 2\,m spheres, and data association and clutter
+      are not modelled.
+\item 99\,\% quantiles from 300 samples are noisy for individual cases, although the medians
+      are stable.
+\item The NRHO ephemeris counterpart is not fully continuous.
+\item The CR3BP study places orbits in the real Earth--Moon direction with analytic
+      ephemerides, and the DE440 check covers 60 of the 525 cases.
+\end{itemize}
+
+\paragraph{Future work.} The main next step is validation with real observations. We plan to
+propose observing requests at Indian facilities (the 2\,m HCT at Hanle, the ARIES telescopes
+at Devasthal and the GROWTH-India 0.7\,m robotic telescope) for targets and nights selected
+from the custody maps. A Sun--Earth $L_2$ halo object such as JWST is a bright proxy target.
+Other extensions are custody-aware sensor tasking that uses the UT-predicted $\Tc$, mixed
+ground and space-based networks, and manoeuvre detection.
+
+%=====================================================================
+\section{Conclusions}
+\label{sec:conclusions}
+
+We defined the custody horizon for ground-based, angles-only tracking of cislunar periodic
+orbits and mapped it over a year of physically generated observations. Cislunar targets sit
+within 4--14$^\circ$ of the Moon, so the exclusion angle and the lunar phase control
+visibility, and a blackout of 8.5--16\,days is unavoidable. The near-stable 9:2 NRHO and DRO
+keep custody for more than 30 days after three or more days of tracking. The unstable $L_1$
+halo and $L_2$ Lyapunov orbits keep it for 11--17\,days (10 fields), with the tracking-arc
+length before a gap as the controlling factor. The horizon is predicted almost exactly by the
+unscented transform of the post-fit covariance, but not by the orbit's FTLE alone, and linear
+prediction gives false custody after about one week on unstable orbits. A Gaussian-mixture UKF
+reacquires reliably where the EKF fails. These conclusions hold in a DE440 ephemeris model
+with solar radiation pressure.
+
+\section*{Code and Data Availability}
+The code (CR3BP and ephemeris dynamics, sensor model, estimators, custody analysis, 47 unit
+tests) and all scripts that regenerate the figures and tables are in the
+\texttt{cislunar-custody} repository, available from the author on request and to be
+released with publication.
+
+\section*{Acknowledgements}
+\todo{Acknowledge advisor, funding and computing resources.}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+%=====================================================================
+\appendix
+\section{Reference Parameters}
+\begin{table}[h]
+\centering\small
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+Quantity & Value\\
+\midrule
+CR3BP & $\mu = 0.0121505842$, length unit 384\,400\,km, time unit 4.3425\,d\\
+Epoch, grid & 2027-01-01 00:00 UTC, 10\,min, one year\\
+Sites & Hanle (32.78$^\circ$N, 78.96$^\circ$E, 4.5\,km); La Palma (28.76$^\circ$N, 17.88$^\circ$W, 2.4\,km); Haleakala (20.71$^\circ$N, 156.26$^\circ$W, 3.05\,km); Siding Spring (31.27$^\circ$S, 149.06$^\circ$E, 1.16\,km)\\
+Constraints & Sun $< -18^\circ$; elevation $> 20^\circ$; exclusion 2/5/10$^\circ$ (reference 5$^\circ$); no occultation; sunlit\\
+Telescopes & limiting magnitude 19.5 / 21.5 / 23.0 for 0.36 / 1 / 2\,m (reference 1\,m)\\
+Target & Lambertian sphere, radius 1\,m, albedo 0.2\\
+Measurements & topocentric RA/Dec, $\sigma = 1''$, every 10\,min per site when visible\\
+Filters & prior 1000\,km / 10\,m\,s$^{-1}$; process-noise PSD $10^{-18}$\,km$^2$\,s$^{-3}$; UKF $\alpha=1$, $\beta=2$, $\kappa=0$; GM split threshold 0.02\,nats, $\le$40 components; PF 3000 particles, hand-over at 50\,km\\
+Custody & fields of 1$^\circ$, $N \in \{1,10,100\}$; 300 Monte Carlo samples; gaps of 0.1--30\,d\\
+Ephemeris & DE440 Sun and Moon, SRP $A/m = 0.01$\,m$^2$\,kg$^{-1}$, $C_r = 1.3$\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\end{document}
