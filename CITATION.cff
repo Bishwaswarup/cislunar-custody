@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: "If you use this software or its results, please cite it as below."
+title: "cislunar-custody: Custody horizons for ground-based angles-only tracking of cislunar periodic orbits"
+type: software
+authors:
+  - family-names: Nayak
+    given-names: Bishwaswarup
+    affiliation: "Department of Physics, Indian Institute of Science, Bangalore, India"
+    email: bishwaswarup@iisc.ac.in
+    orcid: "https://orcid.org/0009-0001-9926-5329"
+version: 1.0.0
+date-released: 2026-09-29
+license: MIT
+repository-code: "https://github.com/Bishwaswarup/cislunar-custody"
+keywords:
+  - cislunar
+  - space domain awareness
+  - angles-only orbit determination
+  - near-rectilinear halo orbit
+  - circular restricted three-body problem
+  - uncertainty propagation
+  - Gaussian mixture filter
+  - unscented Kalman filter
+abstract: >-
+  Python code and data for a study of how long an object on a cislunar periodic orbit
+  can go unobserved before it leaves a ground-based telescope search pattern (the
+  custody horizon). Includes an Earth-Moon CR3BP orbit catalogue, a ground optical
+  sensor and visibility model, Cramer-Rao bounds, EKF/UKF/Gaussian-mixture UKF/particle
+  filters, linear/unscented/Monte Carlo gap propagation, and a JPL DE440 ephemeris +
+  solar radiation pressure cross-check with multiple-shooting orbit counterparts.

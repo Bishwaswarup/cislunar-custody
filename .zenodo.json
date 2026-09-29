@@ -1,0 +1,15 @@
+{
+  "title": "cislunar-custody: Custody horizons for ground-based angles-only tracking of cislunar periodic orbits",
+  "upload_type": "software",
+  "description": "<p>Python code, data and manuscript for a study of how long an object on a cislunar periodic orbit can go unobserved before it leaves a ground-based telescope search pattern (the <em>custody horizon</em>).</p><p>Contents: Earth&ndash;Moon CR3BP orbit catalogue (L1/L2 halo, 9:2 NRHO, Lyapunov, DRO); ground optical sensor and visibility model (four sites, Moon exclusion, Krisciunas&ndash;Schaefer moonlight, photometry); Cram&eacute;r&ndash;Rao bounds; EKF, UKF, Gaussian-mixture UKF and particle filters; linear, unscented and Monte Carlo gap propagation; a JPL DE440 ephemeris + solar radiation pressure cross-check with multiple-shooting orbit counterparts; 47 unit tests and scripts that regenerate every figure.</p><p>Key results: cislunar targets sit 4&ndash;14&deg; from the Moon, causing an unavoidable 8.5&ndash;16 day lunar-phase blackout; the custody horizon exceeds 30 days for the NRHO and DRO and is 11&ndash;17 days for the unstable L1 halo and L2 Lyapunov orbits, set mainly by the tracking-arc length before the gap; the unscented transform of the post-fit covariance predicts the horizon (log-R&sup2; = 1.00) while the orbit's FTLE alone does not; linear (EKF-style) prediction gives false custody after about one week on unstable orbits.</p>",
+  "creators": [
+    {
+      "name": "Nayak, Bishwaswarup",
+      "affiliation": "Indian Institute of Science, Bangalore",
+      "orcid": "0009-0001-9926-5329"
+    }
+  ],
+  "keywords": ["cislunar", "space domain awareness", "angles-only orbit determination", "near-rectilinear halo orbit", "circular restricted three-body problem", "uncertainty propagation", "Gaussian mixture filter", "unscented Kalman filter", "particle filter", "custody"],
+  "license": "MIT",
+  "language": "eng"
+}

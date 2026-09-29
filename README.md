@@ -31,20 +31,20 @@ lunar phase therefore impose a monthly **8.5–16 day observation blackout** tha
 network or bigger telescope can close. We define the **custody horizon** as the longest gap
 after which the target is still inside the telescope search pattern with 99 % probability:
 
-$$
-T_c(N) \;=\; \max\Big\{\Delta t \;:\; \Pr\big[\angle(\hat{\mathbf u}_{\rm target},\hat{\mathbf c}) \le r_N\big] \ge 0.99\Big\},
-\qquad r_N = \phi\sqrt{N/\pi}
-$$
+```math
+T_c(N) = \max\left\{ \Delta t \;:\; \Pr\left[ \angle(\hat{\mathbf u}_{\mathrm{target}}, \hat{\mathbf c}) \le r_N \right] \ge 0.99 \right\},
+\qquad r_N = \phi \sqrt{N/\pi}
+```
 
 Here the search pattern is $N$ fields of view of side $\phi = 1^\circ$. The post-fit
 covariance $P_0$ at the gap start is the Cramér–Rao bound of the preceding tracking arc,
 which the filters reach:
 
-$$
-\mathcal I(t_0) = \sum_k \Phi(t_k,t_0)^{\top} H_k^{\top} R^{-1} H_k\, \Phi(t_k,t_0),
+```math
+\mathcal{I}(t_0) = \sum_k \Phi(t_k,t_0)^{\top} H_k^{\top} R^{-1} H_k \, \Phi(t_k,t_0),
 \qquad
-P_0 = \Phi\,\mathcal I^{-1}\,\Phi^{\top}
-$$
+P_0 = \Phi \, \mathcal{I}^{-1} \, \Phi^{\top}
+```
 
 Propagating $P_0$ through gaps of 0.1–30 days (linear, unscented and Monte Carlo) gives:
 
@@ -204,6 +204,6 @@ paper/               LaTeX manuscript (main.tex, references.bib)
 **Bishwaswarup Nayak** · Department of Physics, Indian Institute of Science, Bangalore<br>
 📧 bishwaswarup@iisc.ac.in · 🆔 [ORCID 0009-0001-9926-5329](https://orcid.org/0009-0001-9926-5329)
 
-<sub>Manuscript in preparation. Please contact the author before reusing the results. Code: MIT License.</sub>
+<sub>Manuscript in preparation. To cite, use <b>Cite this repository</b> in the sidebar (from <code>CITATION.cff</code>). Code: MIT License.</sub>
 
 </div>
