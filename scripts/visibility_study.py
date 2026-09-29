@@ -24,6 +24,8 @@ from cislunar_custody.frames import Ephemeris  # noqa: E402
 from cislunar_custody.sensors import (SITES, NETWORKS, TELESCOPES, Target, REASONS,  # noqa: E402
                                       network_visibility, gap_stats)
 from cislunar_custody.timeutil import jd_from_iso, jd_grid, tu_from_jd  # noqa: E402
+from cislunar_custody.plotstyle import (use_jas_style, save, panel_label, DOUBLE, ORBIT_STYLE,  # noqa: E402
+                                        ORBIT_LABEL, NETWORK_STYLE)
 
 CAT = ROOT / "data" / "catalogue.npz"
 EPOCH, DAYS, STEP_MIN = "2027-01-01T00:00", 365, 10.0
@@ -105,74 +107,79 @@ def main():
 
 
 def plot_timeline(cache, oname, tel, excl, net, days=60):
+    use_jas_style()
     per_site, union, _ = cache[(oname, excl, tel, net)]
     n = int(days * 1440 / STEP_MIN)
     codes = [v.first_reason()[:n] for v in per_site.values()]
     codes.append(np.where(union[:n], 0, len(REASONS) + 1))
-    labels = [SITES[k].name for k in per_site] + ["NETWORK (any site)"]
-    cmap = ListedColormap(["#2a9d8f", "#264653", "#8d99ae", "#6a4c93", "#e9c46a", "#e76f51", "#f4a261", "#d62828"])
-    fig, ax = plt.subplots(figsize=(14, 3.2))
+    labels = [SITES[k].name for k in per_site] + ["network (any site)"]
+    # colour-blind-safe categorical palette; order = ["visible"] + REASONS + ["no site"]
+    cmap = ListedColormap(["#009E73", "#000000", "#999999", "#56B4E9", "#0072B2", "#D55E00", "#F0E442",
+                           "#CC79A7"])
+    fig, ax = plt.subplots(figsize=(DOUBLE, 0.31 * DOUBLE))
     ax.imshow(np.array(codes), aspect="auto", interpolation="nearest", cmap=cmap, vmin=0, vmax=7,
               extent=[0, days, len(codes) - 0.5, -0.5])
     ax.set_yticks(range(len(labels)))
-    ax.set_yticklabels(labels, fontsize=8)
-    ax.set_xlabel(f"days since {EPOCH} UTC")
-    ax.set_title(f"{oname}: first blocking constraint per site "
-                 f"({TELESCOPES[tel].name} telescopes, 2 m target, {excl:.0f} deg Moon exclusion)")
-    names = ["visible"] + list(REASONS) + ["no site"]
-    handles = [plt.Rectangle((0, 0), 1, 1, color=cmap(i)) for i in range(8)]
-    ax.legend(handles, names, ncol=8, fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.28))
-    fig.tight_layout()
-    fig.savefig(ROOT / "figures" / "fig03_visibility_timeline.png", dpi=180)
+    ax.set_yticklabels(labels)
+    ax.set_xlabel(f"days since {EPOCH[:10]} 00:00 UTC")
+    nice = {"day": "twilight/daylight", "low_elev": "below 20° elevation", "occulted": "occulted by Moon",
+            "eclipsed": "in shadow", "moon_excl": "Moon exclusion", "faint": "too faint (moonlight)"}
+    names = ["visible"] + [nice.get(r, r) for r in REASONS] + ["not visible"]
+    handles = [plt.Rectangle((0, 0), 1, 1, facecolor=cmap(i), edgecolor="k", lw=0.3) for i in range(8)]
+    ax.legend(handles, names, ncol=4, loc="upper center", bbox_to_anchor=(0.5, -0.33), handlelength=1.2)
+    fig.tight_layout(rect=(0, 0.0, 1, 1))
+    save(fig, "fig03_visibility_timeline", ROOT)
 
 
 def plot_gap_cdf(cache, orbits, tel, excl):
-    fig, axes = plt.subplots(1, len(orbits), figsize=(16, 3.8), sharey=True)
-    for ax, oname in zip(axes, orbits):
+    use_jas_style()
+    fig, axes = plt.subplots(1, len(orbits), figsize=(DOUBLE, 0.33 * DOUBLE), sharey=True)
+    for ax, oname, letter in zip(axes, orbits, "abcd"):
         drawn = False
-        for nkey, col in zip(NETWORKS, ["#d1495b", "#2a6fdb", "#2a9d8f"]):
+        for nkey in NETWORKS:
             g = cache[(oname, excl, tel, nkey)][2]["gaps_d"]
             if g.size == 0:
                 continue
             x = np.sort(g)
-            ax.step(x, np.arange(1, len(x) + 1) / len(x), where="post", color=col, label=nkey)
+            ax.step(x, np.arange(1, len(x) + 1) / len(x), where="post", label=nkey, **NETWORK_STYLE[nkey])
             drawn = True
         if drawn:
             ax.set_xscale("log")
-            ax.legend(fontsize=8)
         else:
             ax.text(0.5, 0.5, "never visible", ha="center", va="center", transform=ax.transAxes)
-        ax.set_title(oname, fontsize=10)
+        panel_label(ax, letter, ORBIT_LABEL[oname])
         ax.set_xlabel("gap length [days]")
-        ax.grid(alpha=0.3, which="both")
+        ax.grid(True, which="both")
     axes[0].set_ylabel("CDF of observation gaps")
-    fig.suptitle(f"Observation-gap distribution over one year "
-                 f"({TELESCOPES[tel].name} telescopes, 2 m target, {excl:.0f} deg Moon exclusion)")
+    axes[0].legend(loc="upper left")
     fig.tight_layout()
-    fig.savefig(ROOT / "figures" / "fig04_gap_cdf.png", dpi=180)
+    save(fig, "fig04_gap_cdf", ROOT)
 
 
 def plot_separation(seps, jd, jd0, days=60):
-    fig, (a1, a2) = plt.subplots(1, 2, figsize=(14, 3.8), gridspec_kw={"width_ratios": [2.2, 1]})
+    use_jas_style()
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(DOUBLE, 0.36 * DOUBLE), gridspec_kw={"width_ratios": [2.2, 1]})
     t = jd - jd0
     m = t <= days
-    cols = ["#000000", "#2a6fdb", "#e07a1f", "#2a9d8f"]
-    for (oname, s), c in zip(seps.items(), cols):
-        a1.plot(t[m], s[m], color=c, lw=0.9, label=oname)
-        a2.hist(s, bins=np.linspace(0, 16, 65), histtype="step", color=c, density=True, label=oname)
+    for oname, s in seps.items():
+        st = ORBIT_STYLE[oname]
+        a1.plot(t[m], s[m], color=st["color"], ls=st["ls"], lw=0.8, label=ORBIT_LABEL[oname])
+        a2.hist(s, bins=np.linspace(0, 16, 65), histtype="step", color=st["color"], ls=st["ls"], density=True,
+                label=ORBIT_LABEL[oname])
     for e in EXCLUSIONS_DEG:
-        a1.axhline(e, color="grey", ls="--", lw=0.7)
-        a2.axvline(e, color="grey", ls="--", lw=0.7)
-    a1.set_xlabel(f"days since {EPOCH} UTC")
+        a1.axhline(e, color="grey", ls=(0, (4, 2)), lw=0.6)
+        a2.axvline(e, color="grey", ls=(0, (4, 2)), lw=0.6)
+    a1.set_xlabel(f"days since {EPOCH[:10]} 00:00 UTC")
     a1.set_ylabel("angle from Moon, seen from Earth [deg]")
-    a1.legend(fontsize=8, ncol=2)
-    a1.grid(alpha=0.3)
+    a1.legend(ncol=4, loc="upper center", bbox_to_anchor=(0.5, 1.16))
+    a1.grid(True)
     a2.set_xlabel("angle from Moon [deg]")
     a2.set_ylabel("fraction of time (density)")
-    a2.grid(alpha=0.3)
-    fig.suptitle("Cislunar targets stay within a few degrees of the Moon (dashed: exclusion angles swept)")
+    a2.grid(True)
+    panel_label(a1, "a", y=1.18)
+    panel_label(a2, "b", y=1.18)
     fig.tight_layout()
-    fig.savefig(ROOT / "figures" / "fig05_moon_separation.png", dpi=180)
+    save(fig, "fig05_moon_separation", ROOT)
 
 
 if __name__ == "__main__":

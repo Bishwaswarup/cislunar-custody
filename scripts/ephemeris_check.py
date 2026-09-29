@@ -36,8 +36,11 @@ from cislunar_custody.frames import Ephemeris  # noqa: E402
 from cislunar_custody.observability import arc_information  # noqa: E402
 from cislunar_custody.sensors import SITES, NETWORKS, TELESCOPES, network_visibility  # noqa: E402
 from cislunar_custody.timeutil import jd_from_iso, jd_grid, tu_from_jd  # noqa: E402
+from cislunar_custody.plotstyle import (use_jas_style, save, SINGLE, DOUBLE, ORBIT_STYLE,  # noqa: E402
+                                        ORBIT_LABEL)
 
 DAYS, WINDOW_D = 365, 45.0
+CURVES = ROOT / "data" / "ephemeris_curves.npz"
 
 
 def counterparts(de, orb, jd0):
@@ -145,7 +148,14 @@ def main(max_cases, n_samples):
             w = csv.DictWriter(f, fieldnames=list(data[0]))
             w.writeheader()
             w.writerows(data)
+    out = {}
+    for i, (o, cs) in enumerate(curves.items()):
+        out[f"name_{i}"] = np.array(o)
+        out[f"cr3bp_{i}"] = np.array([c[0] for c in cs]) if cs else np.zeros((0, len(DT_DAYS)))
+        out[f"ephem_{i}"] = np.array([c[1] for c in cs]) if cs else np.zeros((0, len(DT_DAYS)))
+    np.savez(CURVES, dt_days=DT_DAYS, **out)
     report(rows)
+    use_jas_style()
     plot_scatter(rows)
     plot_growth(curves)
     print(f"\ndone in {time.time() - t_start:.0f} s -> ephemeris_check.csv, fig16, fig17")
@@ -200,51 +210,73 @@ def report(rows):
 
 
 def plot_scatter(rows, N=10):
-    fig, ax = plt.subplots(figsize=(6.2, 5.6))
+    fig, ax = plt.subplots(figsize=(SINGLE, 0.95 * SINGLE))
+    from matplotlib.lines import Line2D
     for o, col in COLS.items():
         for arc, mk in ((1.0, "v"), (7.0, "o")):
             sel = [r for r in rows if r["orbit"] == o and r["arc_d"] == arc]
             c = np.minimum([r[f"tc_cr3bp_ideal_N{N}"] for r in sel], 35.0)
             e = np.minimum([r[f"tc_ephem_ideal_N{N}"] for r in sel], 35.0)
-            ax.plot(c, e, mk, color=col, ms=6, mfc="none" if arc == 1.0 else col,
-                    label=f"{o} ({arc:.0f}-d arc)")
-    ax.plot([0, 36], [0, 36], "k--", lw=0.8)
+            ax.plot(c, e, mk, color=col, ms=3.5, mew=0.7, mfc="none" if arc == 1.0 else col)
+    hs = [Line2D([], [], ls="none", marker="o", color=COLS[o], ms=3.5, label=ORBIT_LABEL[o]) for o in COLS]
+    hs += [Line2D([], [], ls="none", marker=mk, color="grey", ms=3.5, mfc="none" if a == 1.0 else "grey",
+                  label=f"{a:.0f}-day arc") for a, mk in ((1.0, "v"), (7.0, "o"))]
+    ax.plot([0, 36], [0, 36], "k--", lw=0.7)
     ax.set_xlim(0, 36)
     ax.set_ylim(0, 36)
-    ax.set_xlabel("T_c, CR3BP [days]  (35 = beyond 30 d)")
-    ax.set_ylabel("T_c, DE440 ephemeris + SRP [days]")
-    ax.set_title(f"Custody horizon: CR3BP vs ephemeris (N = {N} fields)")
-    ax.legend(fontsize=6.5)
-    ax.grid(alpha=0.3)
+    ax.set_xlabel("$T_c$, CR3BP [days] (35 = beyond 30 d)")
+    ax.set_ylabel("$T_c$, DE440 + SRP [days]")
+    ax.legend(handles=hs, loc="lower right", ncol=2, handletextpad=0.3, columnspacing=0.8)
+    ax.grid(True)
     fig.tight_layout()
-    fig.savefig(ROOT / "figures" / "fig16_tc_cr3bp_vs_ephemeris.png", dpi=180)
+    save(fig, "fig16_tc_cr3bp_vs_ephemeris", ROOT)
 
 
 def plot_growth(curves):
-    fig, ax = plt.subplots(figsize=(9, 5))
+    fig, ax = plt.subplots(figsize=(SINGLE, 0.95 * SINGLE))
     for o, cs in curves.items():
         if not cs:
             continue
+        st = ORBIT_STYLE[o]
         cr = np.median([c[0] for c in cs], axis=0)
         ep = np.median([c[1] for c in cs], axis=0)
-        ax.loglog(DT_DAYS[1:], cr[1:], color=COLS[o], ls="--", lw=1.2)
-        ax.loglog(DT_DAYS[1:], ep[1:], color=COLS[o], lw=1.8, label=o)
+        ax.loglog(DT_DAYS[1:], cr[1:], color=st["color"], ls="--", lw=0.8)
+        ax.loglog(DT_DAYS[1:], ep[1:], color=st["color"], ls="-", lw=1.2, marker=st["marker"], ms=2.5,
+                  markevery=4, label=ORBIT_LABEL[o])
     for N in N_FIELDS:
-        ax.axhline(search_radius_deg(FOV_DEG, N), color="grey", ls=":", lw=0.8)
-    ax.plot([], [], "k--", lw=1.2, label="CR3BP (dashed)")
-    ax.plot([], [], "k-", lw=1.8, label="ephemeris (solid)")
+        ax.axhline(search_radius_deg(FOV_DEG, N), color="grey", ls=":", lw=0.6)
+    ax.plot([], [], "k--", lw=0.8, label="CR3BP")
+    ax.plot([], [], "k-", lw=1.2, label="DE440 + SRP")
     ax.set_xlabel("gap length [days]")
     ax.set_ylabel("true 99% sky radius [deg]")
-    ax.set_title("Uncertainty growth after 7-day arcs: CR3BP vs DE440 ephemeris (median)")
-    ax.legend(fontsize=8)
-    ax.grid(alpha=0.3, which="both")
+    ax.legend(loc="upper left")
+    ax.grid(True, which="both")
     fig.tight_layout()
-    fig.savefig(ROOT / "figures" / "fig17_growth_cr3bp_vs_ephemeris.png", dpi=180)
+    save(fig, "fig17_growth_cr3bp_vs_ephemeris", ROOT)
+
+
+def plots_only():
+    rows = []
+    for r in csv.DictReader(open(ROOT / "data" / "ephemeris_check.csv")):
+        rows.append({k: (v if k in ("orbit", "scenario") else float(v)) for k, v in r.items()})
+    d = np.load(CURVES)
+    curves, i = {}, 0
+    while f"name_{i}" in d:
+        curves[str(d[f"name_{i}"])] = list(zip(d[f"cr3bp_{i}"], d[f"ephem_{i}"]))
+        i += 1
+    report(rows)
+    use_jas_style()
+    plot_scatter(rows)
+    plot_growth(curves)
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--max-cases", type=int, default=10, help="blackout cases per orbit (phase cases: half)")
     ap.add_argument("--samples", type=int, default=300)
+    ap.add_argument("--plots-only", action="store_true", help="redraw fig16-17 from saved data")
     a = ap.parse_args()
-    main(a.max_cases, a.samples)
+    if a.plots_only:
+        plots_only()
+    else:
+        main(a.max_cases, a.samples)

@@ -3,8 +3,8 @@
 Same 7-day arcs as milestone 4, 'reacquire' mode: the prior (1000 km, 10 m/s) sits at
 the arc start and is propagated across the gap before the first measurement.
 
-    python scripts/nonlinear_filter_study.py                  # 10 runs, 3000 particles
-    python scripts/nonlinear_filter_study.py --runs 20 --particles 5000
+    python scripts/nonlinear_filter_study.py                  # 100 runs, 3000 particles
+    python scripts/nonlinear_filter_study.py --runs 10        # quick look
 Outputs: data/nonlinear_filter_summary.csv, figures/fig10_prior_cloud.png,
          figures/fig11_reacquisition_success.png
 """
@@ -31,9 +31,11 @@ from cislunar_custody.filters import (AnglesModel, EKF, UKF, GMUKF, ParticleFilt
                                       to_physical_sigma)
 from cislunar_custody.scenario import build_measurements, run_filter  # noqa: E402
 from cislunar_custody.timeutil import jd_from_iso  # noqa: E402
+from cislunar_custody.plotstyle import (use_jas_style, save, panel_label, DOUBLE, ORBIT_LABEL,  # noqa: E402
+                                        FILTER_STYLE)
 
 NAMES = ("EKF", "UKF", "GM-UKF", "PF→UKF")
-COLS = {"EKF": "#d1495b", "UKF": "#2a6fdb", "GM-UKF": "#2a9d8f", "PF→UKF": "#6a4c93"}
+COLS = {k: FILTER_STYLE[k]["color"] for k in NAMES}
 
 
 def make_filters(model, n_particles, seed):
@@ -44,6 +46,14 @@ def make_filters(model, n_particles, seed):
         "PF→UKF": ParticleFilter(MU_EM, model, n=n_particles, q_psd_km2_s3=Q_PSD,
                              rng=np.random.default_rng(seed)),
     }
+
+
+def plots_only():
+    """Redraw fig11 from data/nonlinear_filter_summary.csv (fig10 needs a full run)."""
+    summary = []
+    for r in csv.DictReader(open(ROOT / "data" / "nonlinear_filter_summary.csv")):
+        summary.append({k: (v if k in ("orbit", "filter") else float(v)) for k, v in r.items() if v != ""})
+    plot_success(summary)
 
 
 def main(n_runs, n_particles):
@@ -123,14 +133,22 @@ def main(n_runs, n_particles):
 
 def containment(clouds):
     """Share of PF prior particles inside each Gaussian filter's 99% ellipsoid at the
-    first measurement (1.0 = the Gaussian captures the true predicted spread)."""
+    first measurement (1.0 = the Gaussian captures the true predicted spread), and the
+    extent of the particle cloud (1-99 percentile span along its two principal axes).
+    Also written to data/nonlinear_prior_containment.csv."""
     print("\nPrior at first measurement (run 0): PF particles inside each filter's 99% ellipsoid")
     c99 = chi2.ppf(0.99, 6)
+    rows = []
     for oname in dict.fromkeys(o for o, _ in clouds):
         pf, bpf, _ = clouds[(oname, "PF→UKF")]
         if bpf is None:
             continue
         X = bpf["X"]
+        Xp = (X[:, :3] - X[:, :3].mean(0)) * LU_KM
+        w, V = np.linalg.eigh(np.cov(Xp.T))
+        proj = Xp @ V[:, ::-1]
+        span = np.percentile(proj, 99, axis=0) - np.percentile(proj, 1, axis=0)
+        row = {"orbit": oname, "span1_km": float(span[0]), "span2_km": float(span[1]), "span3_km": float(span[2])}
         cells = []
         for k in ("EKF", "UKF", "GM-UKF"):
             f, b, _ = clouds[(oname, k)]
@@ -138,8 +156,16 @@ def containment(clouds):
                 continue
             m, P = f.moments(b)
             d = X - m
-            cells.append(f"{k} {100 * np.mean(np.einsum('ij,ij->i', d, np.linalg.solve(P, d.T).T) < c99):5.1f}%")
-        print(f"  {oname:22s} " + "   ".join(cells))
+            frac = float(np.mean(np.einsum('ij,ij->i', d, np.linalg.solve(P, d.T).T) < c99))
+            row[f"inside99_{k}"] = frac
+            cells.append(f"{k} {100 * frac:5.1f}%")
+        rows.append(row)
+        print(f"  {oname:22s} " + "   ".join(cells) + f"   cloud span {span[0]:.0f} x {span[1]:.0f} km")
+    if rows:
+        with open(ROOT / "data" / "nonlinear_prior_containment.csv", "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=list(dict.fromkeys(k for r in rows for k in r)))
+            w.writeheader()
+            w.writerows(rows)
 
 
 def _ellipse(ax, mean2, cov2, nsig, **kw):
@@ -149,56 +175,82 @@ def _ellipse(ax, mean2, cov2, nsig, **kw):
 
 
 def plot_clouds(clouds, oname):
-    fig, axes = plt.subplots(1, 3, figsize=(15, 4.8))
+    use_jas_style()
+    fig, axes = plt.subplots(1, 3, figsize=(DOUBLE, 0.40 * DOUBLE))
     truth = clouds[(oname, "PF→UKF")][2]
-    for ax, (i, j, lab) in zip(axes, [(0, 1, ("x", "y")), (0, 2, ("x", "z")), (1, 2, ("y", "z"))]):
+    for ax, (i, j, lab), letter in zip(axes, [(0, 1, ("x", "y")), (0, 2, ("x", "z")), (1, 2, ("y", "z"))], "abc"):
         f, b, _ = clouds[(oname, "PF→UKF")]
-        X = (b["X"] - truth) * LU_KM
+        X = (b["X"] - truth) * LU_KM / 1e3
         sub = X[:: max(1, len(X) // 2000)]
-        ax.scatter(sub[:, i], sub[:, j], s=1, color=COLS["PF→UKF"], alpha=0.35, label="PF particles")
+        ax.scatter(sub[:, i], sub[:, j], s=0.6, color="#999999", alpha=0.5, lw=0, label="PF particles",
+                   rasterized=True)
         for k in ("EKF", "UKF"):
             f, bb, _ = clouds[(oname, k)]
             m, P = f.moments(bb)
-            _ellipse(ax, (m[[i, j]] - truth[[i, j]]) * LU_KM, P[np.ix_([i, j], [i, j])] * LU_KM ** 2, 3,
-                     color=COLS[k], lw=1.6, label=f"{k} 3σ")
+            _ellipse(ax, (m[[i, j]] - truth[[i, j]]) * LU_KM / 1e3, P[np.ix_([i, j], [i, j])] * (LU_KM / 1e3) ** 2,
+                     3, color=COLS[k], ls=FILTER_STYLE[k]["ls"], lw=1.1, label=f"{k} 3σ")
         f, bb, _ = clouds[(oname, "GM-UKF")]
         W, M, Ps = bb
         for w, m, P in zip(W, M, Ps):
-            _ellipse(ax, (m[[i, j]] - truth[[i, j]]) * LU_KM, P[np.ix_([i, j], [i, j])] * LU_KM ** 2, 1,
-                     color=COLS["GM-UKF"], lw=0.8, alpha=min(1.0, 0.25 + 3 * w))
-        ax.plot([], [], color=COLS["GM-UKF"], label=f"GM-UKF comps 1σ ({len(W)})")
-        ax.plot(0, 0, "k+", ms=12, mew=2, label="truth")
-        ax.set_xlabel(f"Δ{lab[0]} synodic [km]")
-        ax.set_ylabel(f"Δ{lab[1]} synodic [km]")
-        ax.grid(alpha=0.3)
+            _ellipse(ax, (m[[i, j]] - truth[[i, j]]) * LU_KM / 1e3, P[np.ix_([i, j], [i, j])] * (LU_KM / 1e3) ** 2,
+                     1, color=COLS["GM-UKF"], lw=0.6, alpha=min(1.0, 0.35 + 3 * w))
+        ax.plot([], [], color=COLS["GM-UKF"], lw=0.6, label=f"GM-UKF components 1σ ({len(W)})")
+        ax.plot(0, 0, "k+", ms=7, mew=1.2, label="truth")
+        ax.set_xlabel(f"Δ{lab[0]} [10$^3$ km]")
+        ax.set_ylabel(f"Δ{lab[1]} [10$^3$ km]")
+        ax.grid(True)
         ax.autoscale_view()
-    axes[0].legend(fontsize=7, loc="best")
-    fig.suptitle(f"{oname}: predicted uncertainty at the first measurement after the initial gap (run 0)")
-    fig.tight_layout()
-    fig.savefig(ROOT / "figures" / "fig10_prior_cloud.png", dpi=180)
+        panel_label(ax, letter)
+    from matplotlib.lines import Line2D
+    h, l = axes[0].get_legend_handles_labels()
+    h = [Line2D([], [], ls="none", marker="o", ms=2.5, color="#999999") if lab == "PF particles" else hh
+         for hh, lab in zip(h, l)]
+    fig.legend(h, l, loc="lower center", ncol=5, bbox_to_anchor=(0.5, 0.0))
+    fig.tight_layout(rect=(0, 0.09, 1, 1))
+    save(fig, "fig10_prior_cloud", ROOT)
 
 
 def plot_success(summary):
+    use_jas_style()
     orbits = list(dict.fromkeys(s["orbit"] for s in summary))
-    fig, ax = plt.subplots(figsize=(10, 3.8))
+    fig, ax = plt.subplots(figsize=(DOUBLE, 0.34 * DOUBLE))
     wbar = 0.2
     for j, k in enumerate(NAMES):
-        v = [100 * next((s.get("runs_consistent", 0.0) for s in summary if s["orbit"] == o and s["filter"] == k), 0)
-             for o in orbits]
-        ax.bar(np.arange(len(orbits)) + (j - 1.5) * wbar, v, wbar, color=COLS[k], label=k)
-    ax.set_xticks(range(len(orbits)), orbits)
+        sel = [next((s for s in summary if s["orbit"] == o and s["filter"] == k), {}) for o in orbits]
+        p = np.array([s_.get("runs_consistent", 0.0) for s_ in sel])
+        n = np.array([s_.get("runs", 1) for s_ in sel])
+        lo, hi = _wilson(p * n, n)
+        x = np.arange(len(orbits)) + (j - 1.5) * wbar
+        ax.bar(x, 100 * p, wbar, facecolor=COLS[k], edgecolor="k", lw=0.4, hatch=FILTER_STYLE[k]["hatch"], label=k)
+        ax.errorbar(x, 100 * p, yerr=[100 * np.clip(p - lo, 0, None), 100 * np.clip(hi - p, 0, None)], fmt="none",
+                    ecolor="k", elinewidth=0.6,
+                    capsize=1.5)
+    ax.set_xticks(range(len(orbits)), [ORBIT_LABEL[o] for o in orbits])
     ax.set_ylabel("runs consistent at arc end [%]")
-    ax.set_ylim(0, 105)
-    ax.legend(ncol=4, fontsize=8)
-    ax.grid(alpha=0.3, axis="y")
-    ax.set_title("Reacquisition after the initial gap: share of runs ending consistent (NEES < χ²₉₉%)")
+    ax.set_ylim(0, 112)
+    ax.legend(ncol=4, loc="lower right", bbox_to_anchor=(1.0, 1.0))
+    ax.grid(True, axis="y")
     fig.tight_layout()
-    fig.savefig(ROOT / "figures" / "fig11_reacquisition_success.png", dpi=180)
+    save(fig, "fig11_reacquisition_success", ROOT)
+
+
+def _wilson(k, n, z=1.96):
+    """95% Wilson score interval for k successes in n trials."""
+    k, n = np.asarray(k, float), np.asarray(n, float)
+    p = k / n
+    den = 1 + z ** 2 / n
+    c = (p + z ** 2 / (2 * n)) / den
+    h = z * np.sqrt(p * (1 - p) / n + z ** 2 / (4 * n ** 2)) / den
+    return c - h, c + h
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--runs", type=int, default=10)
+    ap.add_argument("--runs", type=int, default=100)
     ap.add_argument("--particles", type=int, default=3000)
+    ap.add_argument("--plots-only", action="store_true", help="redraw fig11 from saved data")
     a = ap.parse_args()
-    main(a.runs, a.particles)
+    if a.plots_only:
+        plots_only()
+    else:
+        main(a.runs, a.particles)

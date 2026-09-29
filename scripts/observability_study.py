@@ -28,6 +28,7 @@ from cislunar_custody.observability import arc_information  # noqa: E402
 from cislunar_custody.sensors import (SITES, NETWORKS, TELESCOPES, network_visibility,  # noqa: E402
                                       lunar_phase_angle_deg)
 from cislunar_custody.timeutil import jd_from_iso, jd_grid, tu_from_jd  # noqa: E402
+from cislunar_custody.plotstyle import use_jas_style, save, panel_label, DOUBLE, ORBIT_STYLE, ORBIT_LABEL  # noqa: E402
 
 DAYS, ARC_STEP_D, ARCS_D = 365, 2.0, (3.0, 7.0)
 TEL, NET, EXCL, SIGMA = "1m", "Tri-3+S", 5.0, 1.0
@@ -109,54 +110,59 @@ def main():
 
 
 def plot_vs_date(rows):
+    use_jas_style()
     orbits = list(dict.fromkeys(r["orbit"] for r in rows))
-    fig, axes = plt.subplots(len(orbits), 1, figsize=(13, 2.3 * len(orbits)), sharex=True)
-    for ax, oname in zip(axes, orbits):
+    fig, axes = plt.subplots(len(orbits), 1, figsize=(DOUBLE, 0.68 * DOUBLE), sharex=True)
+    arc_style = {3.0: dict(color="#D55E00", ls="--", marker="v"), 7.0: dict(color="#0072B2", ls="-", marker="o")}
+    for ax, oname, letter in zip(axes, orbits, "abcd"):
         ax2 = ax.twinx()
-        for a, col in zip(ARCS_D, ["#d1495b", "#2a6fdb"]):
+        for a in ARCS_D:
             sel = [r for r in rows if r["orbit"] == oname and r["arc_d"] == a]
             d = np.array([r["start_day"] for r in sel])
             s = np.array([r["sig_pos_max_km"] for r in sel], float)
-            ax.semilogy(d, s, "o-", ms=2.5, lw=0.8, color=col, label=f"{a:.0f}-day arc")
+            ax.semilogy(d, s, ms=2.0, lw=0.7, label=f"{a:.0f}-day arc", **arc_style[a])
             if a == ARCS_D[0]:
-                ax2.fill_between(d, [r["moon_illum"] for r in sel], color="grey", alpha=0.15, step="mid")
+                ax2.fill_between(d, [r["moon_illum"] for r in sel], color="grey", alpha=0.18, step="mid", lw=0)
         ax2.set_ylim(0, 1)
         ax2.set_yticks([0, 1])
-        ax2.set_ylabel("Moon illum.", fontsize=7)
-        ax.set_ylabel("σ_pos,max [km]")
-        ax.set_title(oname, fontsize=9, loc="left")
-        ax.grid(alpha=0.3, which="both")
-    axes[0].legend(fontsize=8, loc="upper right")
-    axes[-1].set_xlabel(f"arc start [days since {EPOCH} UTC]  (gaps = arc not observable)")
-    fig.suptitle(f"CRLB position uncertainty at arc end ({TELESCOPES[TEL].name}, {NET}, "
-                 f"{EXCL:.0f}° exclusion, {SIGMA}\" noise)")
-    fig.tight_layout()
-    fig.savefig(ROOT / "figures" / "fig06_crlb_vs_date.png", dpi=180)
+        ax2.set_ylabel("Moon illum.")
+        ax.set_zorder(ax2.get_zorder() + 1)
+        ax.patch.set_visible(False)
+        ax.set_ylabel(r"$\sigma_{\mathrm{pos,max}}$ [km]")
+        panel_label(ax, letter, ORBIT_LABEL[oname])
+        ax.grid(True, which="both")
+    axes[0].legend(loc="lower right", bbox_to_anchor=(1.0, 0.98), ncol=2)
+    axes[-1].set_xlabel(f"arc start [days since {EPOCH[:10]} 00:00 UTC]")
+    fig.tight_layout(h_pad=0.6)
+    save(fig, "fig06_crlb_vs_date", ROOT)
 
 
 def plot_weak(rows):
+    use_jas_style()
     orbits = list(dict.fromkeys(r["orbit"] for r in rows))
-    fig, (a1, a2) = plt.subplots(1, 2, figsize=(13, 3.8))
-    cols = ["#000000", "#2a6fdb", "#e07a1f", "#2a9d8f"]
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(DOUBLE, 0.36 * DOUBLE))
     data = []
-    for oname, c in zip(orbits, cols):
+    for oname in orbits:
+        st = ORBIT_STYLE[oname]
         sel = [r for r in rows if r["orbit"] == oname and r["arc_d"] == 7.0 and r["observable"]]
         w = np.array([r["weak_los_deg"] for r in sel], float)
         if w.size:
-            a1.hist(w, bins=np.linspace(0, 90, 46), histtype="step", color=c, label=oname)
+            a1.hist(w, bins=np.linspace(0, 90, 46), histtype="step", color=st["color"], ls=st["ls"],
+                    label=ORBIT_LABEL[oname])
         data.append(np.array([r["sig_pos_max_km"] for r in sel], float))
     a1.set_xlabel("angle between weakest direction and line of sight [deg]")
     a1.set_ylabel("number of 7-day arcs")
-    a1.legend(fontsize=8)
-    a1.grid(alpha=0.3)
+    a1.legend()
+    a1.grid(True)
     a2.boxplot([d if d.size else [np.nan] for d in data])
-    a2.set_xticks(range(1, len(orbits) + 1), [o.split(" (")[0] for o in orbits])
+    a2.set_xticks(range(1, len(orbits) + 1), [ORBIT_LABEL[o] for o in orbits])
     a2.set_yscale("log")
-    a2.set_ylabel("σ_pos,max at end of 7-day arc [km]")
-    a2.grid(alpha=0.3, which="both")
-    fig.suptitle("Angles-only weak direction and achievable position uncertainty")
+    a2.set_ylabel(r"$\sigma_{\mathrm{pos,max}}$ after 7-day arc [km]")
+    a2.grid(True, which="both")
+    panel_label(a1, "a")
+    panel_label(a2, "b")
     fig.tight_layout()
-    fig.savefig(ROOT / "figures" / "fig07_weak_direction.png", dpi=180)
+    save(fig, "fig07_weak_direction", ROOT)
 
 
 if __name__ == "__main__":

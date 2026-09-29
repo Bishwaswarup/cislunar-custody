@@ -12,7 +12,7 @@ A computational study of NRHO, halo, Lyapunov and DRO orbits in the Earth–Moon
 ![SciPy](https://img.shields.io/badge/SciPy-ODE%20Solver-8CAAE6?logo=scipy&logoColor=white)
 ![Matplotlib](https://img.shields.io/badge/Matplotlib-Figures-11557c)
 ![JPL](https://img.shields.io/badge/Ephemeris-JPL%20DE440-0B3D91)
-![Tests](https://img.shields.io/badge/tests-47%20passing-2ea44f)
+![Tests](https://img.shields.io/badge/tests-50%20passing-2ea44f)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 ![IISc](https://img.shields.io/badge/IISc-Bangalore-d9480f)
 
@@ -63,8 +63,8 @@ Three further findings:
   along the directions the post-fit covariance actually excites.
 - **Linear prediction gives false custody.** After 14 days on the L1 halo, an EKF-style 99 %
   ellipse contains only **8–16 %** of the true probability, against **98 %** for the UT ellipse.
-- **Filter choice decides reacquisition.** After a 3.2-day gap, the EKF ends consistent in 10 % of
-  runs, the UKF in 70 % and a **Gaussian-mixture UKF in 100 %**.
+- **Filter choice decides reacquisition.** After a 3.2-day gap on the L1 halo, the EKF ends consistent
+  in 25 % of 100 runs, the UKF in 55 %, a particle filter in 91 % and a **Gaussian-mixture UKF in 99 %**.
 
 All of this holds in a **JPL DE440 ephemeris model with solar radiation pressure**, where each
 orbit is transitioned by multiple shooting (horizon ratio 0.93–1.01).
@@ -123,8 +123,8 @@ flowchart LR
 
 > 1. **Shrink the Moon-exclusion angle before growing the aperture.** At 10° exclusion, L1/L2 targets are never visible; at 5°, 21–33 % of the year.
 > 2. **Track at least 3 (preferably 7) days before every predicted blackout.** Extra sites do not remove it.
-> 3. **Plan searches with unscented or Gaussian-mixture prediction.** Linear prediction is safe only for gaps shorter than about a week on unstable orbits.
-> 4. **Reacquire with a Gaussian-mixture filter.** It costs about 2× a UKF and was the only filter to reacquire every run.
+> 3. **Plan searches with unscented or Gaussian-mixture prediction.** On the L1 halo, linear prediction is safe only for gaps shorter than about 10 days.
+> 4. **Reacquire with a Gaussian-mixture filter.** It costs about 2× a UKF and was the only filter to reacquire at least 99 % of runs.
 
 ---
 
@@ -135,7 +135,7 @@ git clone https://github.com/Bishwaswarup/cislunar-custody.git && cd cislunar-cu
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev,ephem]"
 curl -o data/de440s.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp
-pytest                                    # 47 tests, ~10 s
+pytest                                    # 50 tests, ~15 s
 ```
 
 <details>
@@ -147,11 +147,19 @@ pytest                                    # 47 tests, ~10 s
 | 2 | `python scripts/visibility_study.py` | ~10 s | one-year visibility, fig03–05 |
 | 3 | `python scripts/observability_study.py` | ~10 s | CRLB of tracking arcs, fig06–07 |
 | 4 | `python scripts/filter_study.py` | ~1 min | EKF/UKF Monte Carlo, fig08–09 |
-| 5 | `python scripts/nonlinear_filter_study.py` | ~1 min | GM-UKF / PF reacquisition, fig10–11 |
+| 5 | `python scripts/nonlinear_filter_study.py` | ~10 min | GM-UKF / PF reacquisition (100 runs), fig10–11 |
 | 6 | `python scripts/custody_study.py` | ~12 min | custody horizons, fig12–15 |
 | 7 | `python scripts/ephemeris_check.py` | ~6 min | DE440 + SRP cross-check, fig16–17 |
+| 8 | `python scripts/sensitivity_check.py` | ~5 min | Monte Carlo sample-size check (300 vs 2000) |
+| 9 | `python scripts/verify_claims.py` | ~20 s | checks every number in `paper/main.tex` against `data/` |
+| 10 | `python scripts/family_sweep.py` | ~25 min | operator horizons across whole families vs stability index, fig18–19 |
+
+Or run everything with `bash scripts/run_all.sh` (logs in `logs/`); `bash scripts/run_all.sh --check` only re-checks the paper.
 
 Each script prints its summary tables. The steps depend on the earlier ones, so run them in order.
+Figures are written twice: `figures/*.png` (previews) and `figures/jas/Fig1…Fig13` (PDF + 600 dpi TIFF,
+84/174 mm wide, for the journal). `custody_study.py`, `ephemeris_check.py` and `nonlinear_filter_study.py`
+accept `--plots-only` to redraw figures from saved data.
 
 </details>
 
@@ -168,10 +176,11 @@ src/cislunar_custody/
 ├── filters/         EKF · UKF · GM-UKF · PF→UKF
 ├── scenario.py      measurement generation and a common filter runner
 ├── custody/         gap propagation and custody horizons
+├── plotstyle.py     journal figure style (fonts, widths, FigN export)
 └── ephem/           DE440, ephemeris + SRP dynamics, multiple shooting
 scripts/             one script per milestone
-tests/               47 pytest tests
-paper/               LaTeX manuscript (main.tex, references.bib)
+tests/               50 pytest tests
+paper/               LaTeX manuscript for JAS (Springer sn-jnl template: main.tex, references.bib)
 ```
 
 </details>
@@ -189,11 +198,34 @@ paper/               LaTeX manuscript (main.tex, references.bib)
 
 ---
 
+## Verification
+
+Every number in the manuscript is re-computed from `data/` by `scripts/verify_claims.py`,
+which reports each claim as PASS, FAIL (the paper is wrong), WEAK (right but statistically
+thin: small n, wide confidence interval or a non-significant difference) or TEXT (the paper no
+longer states it). Current report: `data/claims_report.txt`.
+
+| Check | What it tests |
+| :-- | :-- |
+| Claim verifier | ~210 numbers in text and tables against the saved study outputs |
+| Confidence intervals | 95 % Wilson intervals on filter success rates and blackout survival; Fisher exact tests between filters |
+| Bootstrap | 95 % intervals on every log-R² of the custody-horizon predictors |
+| Distinct arcs | pooled statistics count each tracking arc once (131 of the 525 cases repeat an arc) |
+| Monte Carlo convergence | `sensitivity_check.py`: 300 vs 2000 samples change T_c by a median 0.1–0.2 d |
+| Run count | reacquisition re-run with 100 Monte Carlo runs per filter (was 10) |
+| Operator horizon | T_c with the search centred on the UT prediction (circle and ellipse-aligned strip), not on the true mean |
+| Family sweep | T_c for members of all five families, with random orbital phase, against stability index |
+| Reproducibility | every script re-runs deterministically from fixed seeds; `run_all.sh` regenerates everything |
+
+---
+
 ## Roadmap
 
 - [x] CR3BP catalogue · sensor model · observability · filters · custody horizons · ephemeris check
-- [x] Manuscript draft (`paper/`)
-- [ ] Submission (*The Journal of the Astronautical Sciences*) and arXiv preprint
+- [x] Manuscript in the Springer template, figures to JAS specifications (`paper/`, `figures/jas/`)
+- [x] Claim verifier, sample-size check, confidence intervals
+- [ ] Operator horizon as the headline metric and family sweep in the paper (milestone 8)
+- [ ] Submission to *The Journal of the Astronautical Sciences*
 - [ ] Real-data validation with Indian observatories (IIA Hanle, ARIES Devasthal, GROWTH-India)
 - [ ] Custody-aware sensor tasking using the UT-predicted $T_c$
 
@@ -204,6 +236,6 @@ paper/               LaTeX manuscript (main.tex, references.bib)
 **Bishwaswarup Nayak** · Department of Physics, Indian Institute of Science, Bangalore<br>
 📧 bishwaswarup@iisc.ac.in · 🆔 [ORCID 0009-0001-9926-5329](https://orcid.org/0009-0001-9926-5329)
 
-<sub>Manuscript in preparation. To cite, use <b>Cite this repository</b> in the sidebar (from <code>CITATION.cff</code>). Code: MIT License.</sub>
+<sub>Manuscript prepared for <i>The Journal of the Astronautical Sciences</i>. To cite, use <b>Cite this repository</b> in the sidebar (from <code>CITATION.cff</code>). Code: MIT License.</sub>
 
 </div>

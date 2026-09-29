@@ -59,9 +59,43 @@ def _mahalanobis2(p, C):
     return np.sum((p @ V) ** 2 / w, axis=1)
 
 
-def predict_gap(x0, P0, dt_grid, jd0, mu, n_samples=500, rng=None, rtol=1e-9, atol=1e-11):
+def strip_pattern(fov_deg, n_fields, axis_ratio):
+    """Operational search pattern: n_fields square fields of side fov_deg laid out as a
+    rectangle of n_l x n_w fields whose aspect follows the predicted sky ellipse
+    (axis_ratio = minor / major 1-sigma axis, <= 1). Uses at most n_fields fields.
+    Returns (full length, full width) in degrees."""
+    n_w = int(max(1, min(n_fields, round(np.sqrt(n_fields * max(axis_ratio, 0.0))))))
+    n_l = max(1, n_fields // n_w)
+    return n_l * fov_deg, n_w * fov_deg
+
+
+def containment_horizon(t, frac, level=0.99):
+    """First t at which the contained fraction drops below level (linear interpolation
+    in log t). 0 if already below at t[0]; inf if never within the grid."""
+    t, frac = np.asarray(t, float), np.asarray(frac, float)
+    below = np.where(frac < level)[0]
+    if below.size == 0:
+        return np.inf
+    i = below[0]
+    if i == 0:
+        return 0.0
+    f0, f1 = frac[i - 1], frac[i]
+    w = (f0 - level) / (f0 - f1) if f0 > f1 else 1.0
+    t0, t1 = max(t[i - 1], 1e-12), t[i]
+    return float(np.exp(np.log(t0) + w * (np.log(t1) - np.log(t0))))
+
+
+def predict_gap(x0, P0, dt_grid, jd0, mu, n_samples=500, rng=None, rtol=1e-9, atol=1e-11, batch=None,
+                strips=None):
     """Propagate (x0, P0) over gap lengths dt_grid [TU] (starting with 0) from Julian
-    date jd0. Returns a dict of arrays over dt_grid (angles in degrees)."""
+    date jd0. Returns a dict of arrays over dt_grid (angles in degrees).
+    batch: integrate the Monte Carlo samples in chunks of this size. The samples share one
+    adaptive step size, so one sample passing close to the Moon slows the whole set;
+    chunking keeps large sample sets fast. None (default) integrates all samples at once.
+    strips: optional list of (fov_deg, n_fields). For each, out[f"contain_strip_N{n}"] is the
+    share of MC samples inside a strip_pattern centred on the UT-predicted direction and
+    aligned with the UT sky ellipse (the operator's search); out["ut_axis_ratio"] is the
+    minor/major ratio of that ellipse. The other outputs do not depend on this option."""
     rng = np.random.default_rng() if rng is None else rng
     dt_grid = np.asarray(dt_grid, float)
     M = len(dt_grid)
@@ -79,13 +113,22 @@ def predict_gap(x0, P0, dt_grid, jd0, mu, n_samples=500, rng=None, rtol=1e-9, at
 
     S0 = x0 + rng.standard_normal((n_samples, 6)) @ np.linalg.cholesky(P0).T
     floor = (R_EARTH_KM / LU_KM, R_MOON_KM / LU_KM)      # samples that would impact the Moon/Earth
-    Ymc = propagate_many_dense(S0, dt_grid, mu, rtol, atol, r_floor=floor)            # (M, n, 6)
+    if batch is None or n_samples <= batch:
+        Ymc = propagate_many_dense(S0, dt_grid, mu, rtol, atol, r_floor=floor)        # (M, n, 6)
+    else:
+        Ymc = np.concatenate([propagate_many_dense(S0[i:i + batch], dt_grid, mu, rtol, atol, r_floor=floor)
+                              for i in range(0, n_samples, batch)], axis=1)
 
     eph = Ephemeris(jd0 + dt_grid * TU_S / DAY_S)
     out = {k: np.zeros(M) for k in ("theta_ideal", "theta_lin_claim", "theta_lin_actual",
                                     "contain_lin", "theta_ut_claim", "theta_ut_actual", "contain_ut")}
     out["dt"] = dt_grid
     out["smax"] = smax
+    strips = list(strips or [])
+    for fov, n in strips:
+        out[f"contain_strip_N{n}"] = np.zeros(M)
+    if strips:
+        out["ut_axis_ratio"] = np.zeros(M)
     for k in range(M):
         bk = tuple(b[k] for b in eph.basis)
         B = LU_KM * np.stack(bk, axis=-1)
@@ -101,6 +144,17 @@ def predict_gap(x0, P0, dt_grid, jd0, mu, n_samples=500, rng=None, rtol=1e-9, at
             out[f"theta_{tag}_claim"][k] = np.degrees(np.quantile(np.linalg.norm(_Z @ L.T, axis=1), 0.99))
             out[f"theta_{tag}_actual"][k] = np.degrees(np.quantile(np.arccos(np.clip(umc @ u, -1, 1)), 0.99))
             out[f"contain_{tag}"][k] = np.mean(_mahalanobis2(umc @ E.T, C_sky) < CHI2_2_99)
+            if tag == "ut" and strips:
+                w2, V2 = np.linalg.eigh(0.5 * (C_sky + C_sky.T))
+                ratio = float(np.sqrt(max(w2[0], 0.0) / max(w2[1], 1e-300)))
+                out["ut_axis_ratio"][k] = ratio
+                cosu = umc @ u
+                q = (umc @ E.T) / np.where(cosu > 0, cosu, np.nan)[:, None]      # gnomonic [rad]
+                a, b = q @ V2[:, 1], q @ V2[:, 0]                                # major, minor axes
+                for fov, n in strips:
+                    L_deg, W_deg = strip_pattern(fov, n, ratio)
+                    inside = (np.abs(a) <= np.radians(L_deg) / 2) & (np.abs(b) <= np.radians(W_deg) / 2)
+                    out[f"contain_strip_N{n}"][k] = float(np.mean(np.where(cosu > 0, inside, False)))
     return out
 
 
@@ -132,3 +186,8 @@ def custody_horizons(pred, r_search_deg):
         "ut_actual": crossing_time(t, pred["theta_ut_actual"], r_search_deg),
         "ftle": crossing_time(t, pred["smax"], r_search_deg / theta0),
     }
+
+
+def strip_horizon(pred, n_fields, level=0.99):
+    """Operator horizon for the elongated, UT-centred strip search of n_fields fields."""
+    return containment_horizon(pred["dt"], pred[f"contain_strip_N{n_fields}"], level)

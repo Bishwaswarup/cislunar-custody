@@ -32,11 +32,12 @@ from cislunar_custody.constants import MU_EM, LU_KM, VU_KMS, TU_DAYS  # noqa: E4
 from cislunar_custody.filters import AnglesModel, EKF, UKF, to_physical_sigma  # noqa: E402
 from cislunar_custody.scenario import build_measurements, run_filter  # noqa: E402
 from cislunar_custody.timeutil import jd_from_iso  # noqa: E402
+from cislunar_custody.plotstyle import use_jas_style, save, panel_label, DOUBLE, ORBIT_LABEL, FILTER_STYLE  # noqa: E402
 
 ARC_D, SIG0_POS_KM, SIG0_VEL_MS, SIGMA, Q_PSD = 7.0, 1000.0, 10.0, 1.0, 1e-18
 FILTERS = {"EKF": EKF, "UKF": UKF}
 MODES = ("track", "reacquire")
-COLS = {"EKF": "#d1495b", "UKF": "#2a6fdb"}
+COLS = {k: FILTER_STYLE[k]["color"] for k in FILTERS}
 
 
 def pick_arcs():
@@ -130,8 +131,9 @@ def main(n_runs):
 
 
 def plot_errors(results):
-    fig, axes = plt.subplots(len(results), 1, figsize=(12, 2.4 * len(results)), sharex=True)
-    for ax, (oname, (runs, starts, d0)) in zip(axes, results.items()):
+    use_jas_style()
+    fig, axes = plt.subplots(len(results), 1, figsize=(DOUBLE, 0.68 * DOUBLE), sharex=True)
+    for ax, (oname, (runs, starts, d0)), letter in zip(axes, results.items(), "abcd"):
         t0 = starts["reacquire"]
         for (md, k), rr in runs.items():
             ok = [r for r in rr if not r["diverged"]]
@@ -141,21 +143,21 @@ def plot_errors(results):
             td = (ok[0]["t"][:n] - t0) * TU_DAYS
             e = np.median([np.linalg.norm(r["err"][:n, :3], axis=1) * LU_KM for r in ok], axis=0)
             s3 = np.median([[3 * to_physical_sigma(P)[0] for P in r["P"][:n]] for r in ok], axis=0)
-            ax.semilogy(td, e, color=COLS[k], lw=1.0, label=f"{k} |error| (median)")
-            ax.semilogy(td, s3, color=COLS[k], lw=1.0, ls="--", label=f"{k} 3σ max")
-        ax.set_title(f"{oname}  (arc starts day {d0:.0f})", fontsize=9, loc="left")
+            ax.semilogy(td, e, color=COLS[k], lw=0.9, ls="-", label=f"{k} |error| (median)")
+            ax.semilogy(td, s3, color=COLS[k], lw=0.9, ls="--" if k == "EKF" else ":", label=f"{k} 3σ max")
+        panel_label(ax, letter, f"{ORBIT_LABEL[oname]} (arc starts day {d0:.0f})")
         ax.set_ylabel("position [km]")
-        ax.grid(alpha=0.3, which="both")
-    axes[0].legend(fontsize=7, ncol=4)
+        ax.grid(True, which="both")
+    axes[0].legend(ncol=4, loc="lower right", bbox_to_anchor=(1.0, 0.98))
     axes[-1].set_xlabel("time since arc start [days]")
-    fig.suptitle(f"EKF vs UKF ('track' mode): position error and 3σ over 7-day arcs (prior {SIG0_POS_KM:.0f} km, {SIGMA}\")")
-    fig.tight_layout()
-    fig.savefig(ROOT / "figures" / "fig08_filter_errors.png", dpi=180)
+    fig.tight_layout(h_pad=0.6)
+    save(fig, "fig08_filter_errors", ROOT)
 
 
 def plot_nees(results, n_runs):
-    fig, axes = plt.subplots(len(results), 1, figsize=(12, 2.2 * len(results)), sharex=True)
-    for ax, (oname, (runs, starts, d0)) in zip(axes, results.items()):
+    use_jas_style()
+    fig, axes = plt.subplots(len(results), 1, figsize=(DOUBLE, 0.62 * DOUBLE), sharex=True)
+    for ax, (oname, (runs, starts, d0)), letter in zip(axes, results.items(), "abcd"):
         t0 = starts["reacquire"]
         for (md, k), rr in runs.items():
             ok = [r for r in rr if not r["diverged"]]
@@ -163,18 +165,18 @@ def plot_nees(results, n_runs):
                 continue
             n = min(len(r["t"]) for r in ok)
             td = (ok[0]["t"][:n] - t0) * TU_DAYS
-            ax.semilogy(td, np.mean([r["nees"][:n] for r in ok], axis=0), color=COLS[k], lw=0.9, label=k)
+            ax.semilogy(td, np.mean([r["nees"][:n] for r in ok], axis=0), color=COLS[k], lw=0.8,
+                        ls=FILTER_STYLE[k]["ls"], label=k)
             lo, hi = chi2.ppf([0.025, 0.975], 6 * len(ok)) / len(ok)
         ax.axhspan(lo, hi, color="grey", alpha=0.2, label="95% band")
         ax.axhline(6, color="k", lw=0.6)
-        ax.set_title(oname, fontsize=9, loc="left")
+        panel_label(ax, letter, ORBIT_LABEL[oname])
         ax.set_ylabel("ANEES")
-        ax.grid(alpha=0.3, which="both")
-    axes[0].legend(fontsize=7, ncol=3)
+        ax.grid(True, which="both")
+    axes[0].legend(ncol=3, loc="lower right", bbox_to_anchor=(1.0, 0.98))
     axes[-1].set_xlabel("time since arc start [days]")
-    fig.suptitle(f"Filter consistency: average NEES over {n_runs} runs (ideal 6)")
-    fig.tight_layout()
-    fig.savefig(ROOT / "figures" / "fig09_nees.png", dpi=180)
+    fig.tight_layout(h_pad=0.6)
+    save(fig, "fig09_nees", ROOT)
 
 
 if __name__ == "__main__":
