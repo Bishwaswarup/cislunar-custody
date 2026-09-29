@@ -80,12 +80,18 @@ def jacobian(s, mu):
     return A
 
 
-def eom_many(t, Y, mu):
-    """Vectorised EOM for k stacked states: Y = [s_1, ..., s_k] (6k,)."""
+def eom_many(t, Y, mu, r_floor=None):
+    """Vectorised EOM for k stacked states: Y = [s_1, ..., s_k] (6k,).
+    r_floor = (r1_min, r2_min) [LU] optionally floors the Earth/Moon distances used in the
+    gravity terms. It only changes the force INSIDE the bodies (samples that would have
+    impacted), keeping the integrator from stalling at the singularity; None = exact."""
     S = Y.reshape(-1, 6)
     x, y, z, vx, vy, vz = S.T
     r1 = np.sqrt((x + mu) ** 2 + y ** 2 + z ** 2)
     r2 = np.sqrt((x - 1.0 + mu) ** 2 + y ** 2 + z ** 2)
+    if r_floor is not None:
+        r1 = np.maximum(r1, r_floor[0])
+        r2 = np.maximum(r2, r_floor[1])
     c1 = (1.0 - mu) / r1 ** 3
     c2 = mu / r2 ** 3
     out = np.empty_like(S)
@@ -105,6 +111,18 @@ def propagate_many(S0, dt, mu, rtol=1e-10, atol=1e-12, method="DOP853"):
     if not sol.success:
         raise RuntimeError(f"CR3BP integration failed: {sol.message}")
     return sol.y[:, -1].reshape(-1, 6)
+
+
+def propagate_many_dense(S0, t_eval, mu, rtol=1e-10, atol=1e-12, method="DOP853", r_floor=None):
+    """Propagate k states (k, 6) and return them at every t_eval (M,) [TU] -> (M, k, 6).
+    t_eval must start at 0 or later and be increasing. See eom_many for r_floor."""
+    S0 = np.atleast_2d(np.asarray(S0, float))
+    t_eval = np.asarray(t_eval, float)
+    sol = solve_ivp(eom_many, (0.0, t_eval[-1]), S0.ravel(), method=method, args=(mu, r_floor),
+                    rtol=rtol, atol=atol, t_eval=t_eval)
+    if not sol.success:
+        raise RuntimeError(f"CR3BP integration failed: {sol.message}")
+    return sol.y.T.reshape(len(t_eval), -1, 6)
 
 
 def eom_stm(t, y, mu):
