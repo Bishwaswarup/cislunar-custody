@@ -50,7 +50,13 @@ def richardson_halo(mu, Az, L=1, northern=True):
     Returns (state0, period_guess) with the orbit on y = 0, vx = vz = 0."""
     xl, g, c2, c3, c4 = _gamma_c(mu, L)
     lam, k = _lam_k(c2)
+    # `northern` = sign of the LARGEST z-excursion (Gateway's 9:2 NRHO is an L2 southern
+    # halo: apolune over the lunar south pole). Richardson's tau1 = 0 point lies on the
+    # Earth side for L1 (where |z| is largest) but on the Moon side for L2 (where |z| is
+    # smallest, with the opposite sign), so the class sign flips for L2.
     dm = 1.0 if northern else -1.0
+    if L == 2:
+        dm = -dm
     d1 = 3 * lam ** 2 / k * (k * (6 * lam ** 2 - 1) - 2 * lam)
     d2 = 8 * lam ** 2 / k * (k * (11 * lam ** 2 - 1) - 2 * lam)
     a21 = 3 * c3 * (k ** 2 - 2) / (4 * (1 + 2 * c2))

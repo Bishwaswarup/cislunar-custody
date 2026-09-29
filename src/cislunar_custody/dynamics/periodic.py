@@ -65,6 +65,19 @@ class PeriodicOrbit:
         _, r2 = distances(S, self.mu)
         return float(r2.min()), float(r2.max())
 
+    def states_at(self, t, phase=0.0):
+        """States at times t [TU] using periodicity (dense output over one period).
+        phase: orbit time [TU] at t = 0."""
+        if "_dense" not in self.meta:
+            self.meta["_dense"] = propagate(self.state0, self.period, self.mu, dense_output=True).sol
+        tt = np.mod(np.asarray(t, float) + phase, self.period)
+        return np.atleast_2d(self.meta["_dense"](tt).T)
+
+    def z_extreme(self, n=2000) -> float:
+        """Signed z at the largest |z| (> 0: northern, < 0: southern)."""
+        _, S = self.trajectory(n)
+        return float(S[np.argmax(np.abs(S[:, 2])), 2])
+
     def closure_error(self) -> float:
         sf = propagate(self.state0, self.period, self.mu).y[:, -1]
         return float(np.linalg.norm(sf - self.state0))

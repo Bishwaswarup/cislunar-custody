@@ -16,7 +16,7 @@ def test_richardson_seed_corrects_to_periodic_halo(L, northern):
     assert orb.meta["iterations"] <= 8
     assert orb.closure_error() < 1e-8
     assert orb.period == pytest.approx(T_guess, rel=0.02)   # 3rd-order guess is close
-    assert np.sign(orb.state0[2]) == (1 if northern else -1)
+    assert np.sign(orb.z_extreme()) == (1 if northern else -1)   # class = sign of max |z|
 
 
 def test_monodromy_has_reciprocal_and_unit_multipliers():
@@ -66,3 +66,4 @@ def test_nrho_9_2_matches_literature():
     assert 3000 < rp * LU_KM < 3500
     assert 69000 < ra * LU_KM < 73000
     assert 1.0 < nrho.stability_index() < 2.0      # nearly stable
+    assert nrho.z_extreme() * LU_KM < -60000       # southern: apolune over the south pole
