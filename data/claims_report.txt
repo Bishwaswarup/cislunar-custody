@@ -1,0 +1,214 @@
+id                 verdict where              claim  |  paper -> data   [note]
+--------------------------------------------------------------------------------------------------------------
+M1                 PASS    Sec 3.1            9:2 NRHO period [d]  |  6.5624 -> 6.562
+M2                 PASS    Sec 3.1            NRHO perilune radius [km]  |  3249 -> 3249
+M3                 PASS    Sec 3.1            NRHO apolune radius [km]  |  71222 -> 7.122e+04
+M4                 PASS    Sec 3.1            NRHO stability index  |  1.32 -> 1.323
+M5a                PASS    Sec 3.1            family size L1_halo_north  |  88 -> 88
+M5b                PASS    Sec 3.1            family size L2_halo_south  |  140 -> 140
+M5c                PASS    Sec 3.1            family size L1_lyapunov  |  60 -> 60
+M5d                PASS    Sec 3.1            family size L2_lyapunov  |  60 -> 60
+M5e                PASS    Sec 3.1            family size DRO  |  94 -> 94
+M6                 PASS    Sec 3.3            target magnitude at zero phase, lunar distance  |  18.4 -> 18.38
+V1.NRHO.2          PASS    Table 1            NRHO visible % at 2 deg  |  37.5 -> 37.5
+V2.NRHO.2          PASS    Table 1            NRHO max gap [d] at 2 deg  |  12.8 -> 12.82
+V1.NRHO.5          PASS    Table 1            NRHO visible % at 5 deg  |  31.4 -> 31.4
+V2.NRHO.5          PASS    Table 1            NRHO max gap [d] at 5 deg  |  13.2 -> 13.17
+V1.NRHO.10         PASS    Table 1            NRHO visible % at 10 deg  |  4.5 -> 4.547
+V2.NRHO.10         PASS    Table 1            NRHO max gap [d] at 10 deg  |  19.5 -> 19.47
+V1.L1.2            PASS    Table 1            L1 visible % at 2 deg  |  42.7 -> 42.72
+V2.L1.2            PASS    Table 1            L1 max gap [d] at 2 deg  |  11.2 -> 11.22
+V1.L1.5            PASS    Table 1            L1 visible % at 5 deg  |  32.6 -> 32.58
+V2.L1.5            PASS    Table 1            L1 max gap [d] at 5 deg  |  11.8 -> 11.85
+V1.L1.10           PASS    Table 1            L1 visible % at 10 deg  |  0.0 -> 0
+V1.L2.2            PASS    Table 1            L2 visible % at 2 deg  |  32.7 -> 32.74
+V2.L2.2            PASS    Table 1            L2 max gap [d] at 2 deg  |  13.5 -> 13.49
+V1.L2.5            PASS    Table 1            L2 visible % at 5 deg  |  20.6 -> 20.56
+V2.L2.5            PASS    Table 1            L2 max gap [d] at 5 deg  |  14.5 -> 14.49
+V1.L2.10           PASS    Table 1            L2 visible % at 10 deg  |  0.0 -> 0
+V1.DRO.2           PASS    Table 1            DRO visible % at 2 deg  |  38.0 -> 38
+V2.DRO.2           PASS    Table 1            DRO max gap [d] at 2 deg  |  11.8 -> 11.82
+V1.DRO.5           PASS    Table 1            DRO visible % at 5 deg  |  32.5 -> 32.49
+V2.DRO.5           PASS    Table 1            DRO max gap [d] at 5 deg  |  11.9 -> 11.93
+V1.DRO.10          PASS    Table 1            DRO visible % at 10 deg  |  21.2 -> 21.21
+V2.DRO.10          PASS    Table 1            DRO max gap [d] at 10 deg  |  16.5 -> 16.45
+V3                 PASS    Sec 5              L1/L2 never observable at 10 deg (all telescopes and networks)  |  True -> True
+V4                 PASS    Sec 5              L1/L2 observable share at 5 deg [%]  |  (21, 33) -> 20.56-32.58
+V5                 PASS    Sec 5              1 m -> 2 m change in visible share, Tri-3+S, 5 deg [pp]  |  (0.5, 1.7) -> 0.5061-1.67
+V6                 PASS    Sec 5 / abstract   longest gap at 5 deg, 1-2 m, all networks and orbits [d]  |  (8.5, 15.7) -> 8.5-15.69
+V7.L1              PASS    Sec 5              L1 Moon separation range [deg]  |  (3.9, 6.1) -> 3.863-6.072
+V7.L2              PASS    Sec 5              L2 Moon separation range [deg]  |  (0.0, 7.0) -> 0-6.999
+V7.NRHO            PASS    Sec 5              NRHO Moon separation range [deg]  |  (0.5, 10.0) -> 0.4838-9.986
+V7.DRO             PASS    Sec 5              DRO Moon separation range [deg]  |  (0.0, 13.9) -> 0-13.87
+V8                 PASS    Sec 5              NRHO median Moon separation [deg]  |  8.3 -> 8.281
+V9                 PASS    abstract           all targets within 14 deg of the Moon  |  True -> max 13.87 deg
+O1.NRHO            PASS    Sec 6 / abstract   NRHO median CRLB, 7-d arcs [km]  |  1.12 -> 1.122
+O1.L1              PASS    Sec 6 / abstract   L1 median CRLB, 7-d arcs [km]  |  1.74 -> 1.736
+O1.DRO             PASS    Sec 6 / abstract   DRO median CRLB, 7-d arcs [km]  |  6.87 -> 6.874
+O1.L2              PASS    Sec 6 / abstract   L2 median CRLB, 7-d arcs [km]  |  17.1 -> 17.09
+O2                 PASS    Sec 6              median velocity CRLB, 7-d arcs [mm/s]  |  (6, 101) -> 5.923-100.6
+O3                 PASS    Sec 6              share of 7-d arcs that are observable [%]  |  (75, 84) -> 75.41-83.61
+O4                 PASS    Sec 6              median weak-direction angle to LOS, DRO & L2 [deg]  |  (6.6, 7.8) -> 6.59-7.819
+O5                 PASS    Sec 6              median weak-direction angle, NRHO & L1 [deg]  |  (12.7, 18.3) -> 12.71-18.34
+F1.NRHO.crlb       PASS    Table 2            NRHO CRLB of chosen arc  |  1.13 -> 1.127
+F1.NRHO.ekf        PASS    Table 2            NRHO EKF RMS error  |  1.1 -> 1.095
+F1.NRHO.ekfa       PASS    Table 2            NRHO EKF ANEES  |  4.51 -> 4.51
+F1.NRHO.ukf        PASS    Table 2            NRHO UKF RMS error  |  1.08 -> 1.08
+F1.NRHO.ukfa       PASS    Table 2            NRHO UKF ANEES  |  4.4 -> 4.397
+F1.L1.crlb         PASS    Table 2            L1 CRLB of chosen arc  |  1.74 -> 1.736
+F1.L1.ekf          PASS    Table 2            L1 EKF RMS error  |  2.33 -> 2.333
+F1.L1.ekfa         PASS    Table 2            L1 EKF ANEES  |  9.12 -> 9.12
+F1.L1.ukf          PASS    Table 2            L1 UKF RMS error  |  2.1 -> 2.099
+F1.L1.ukfa         PASS    Table 2            L1 UKF ANEES  |  7.66 -> 7.663
+F1.L2.crlb         PASS    Table 2            L2 CRLB of chosen arc  |  17.6 -> 17.6
+F1.L2.ekf          PASS    Table 2            L2 EKF RMS error  |  15.25 -> 15.25
+F1.L2.ekfa         PASS    Table 2            L2 EKF ANEES  |  6.35 -> 6.354
+F1.L2.ukf          PASS    Table 2            L2 UKF RMS error  |  15.15 -> 15.15
+F1.L2.ukfa         PASS    Table 2            L2 UKF ANEES  |  6.31 -> 6.306
+F1.DRO.crlb        PASS    Table 2            DRO CRLB of chosen arc  |  6.95 -> 6.949
+F1.DRO.ekf         PASS    Table 2            DRO EKF RMS error  |  6.88 -> 6.884
+F1.DRO.ekfa        PASS    Table 2            DRO EKF ANEES  |  6.23 -> 6.23
+F1.DRO.ukf         PASS    Table 2            DRO UKF RMS error  |  6.93 -> 6.926
+F1.DRO.ukfa        PASS    Table 2            DRO UKF ANEES  |  6.25 -> 6.254
+F2                 PASS    Sec 6              tracking ANEES outside the 95% band of 20 runs [4.58, 7.61]: only NRHO (both, conservative) and L1 (both)  |  NRHO,L1 -> NRHO/EKF, NRHO/UKF, L1/EKF, L1/UKF
+R1.EKF             PASS    Table 2 / abstract L1 reacquisition: EKF runs consistent [%]  |  25 -> 25   [n=100, 95% CI 18-34%]
+R1.UKF             PASS    Table 2 / abstract L1 reacquisition: UKF runs consistent [%]  |  55 -> 55   [n=100, 95% CI 45-64%]
+R1.GM-UKF          PASS    Table 2 / abstract L1 reacquisition: GM-UKF runs consistent [%]  |  99 -> 99   [n=100, 95% CI 95-100%]
+R1.PF→UKF          PASS    Table 2 / abstract L1 reacquisition: PF→UKF runs consistent [%]  |  91 -> 91   [n=100, 95% CI 84-95%]
+R2.GM-UKF>UKF      PASS    Sec 6 / Discussion GM-UKF reacquires more often than UKF (Fisher exact test)  |  p<=0.02 -> 99/100 vs 55/100, p=2.68e-15
+R2.GM-UKF>EKF      PASS    Sec 6 / Discussion GM-UKF reacquires more often than EKF (Fisher exact test)  |  p<=0.02 -> 99/100 vs 25/100, p=1.75e-31
+R2.UKF>EKF         PASS    Sec 6 / Discussion UKF reacquires more often than EKF (Fisher exact test)  |  p<=0.02 -> 55/100 vs 25/100, p=2.43e-05
+R2.GM-UKF>PF→UKF   PASS    Sec 6 / Discussion GM-UKF reacquires more often than PF→UKF (Fisher exact test)  |  p<=0.02 -> 99/100 vs 91/100, p=0.0185
+R3.EKF.med         PASS    Table 2            EKF median final error [km]  |  12.6 -> 12.62
+R3.EKF.max         PASS    Table 2            EKF max final error [km]  |  561.8 -> 561.8
+R3.EKF.anees       PASS    Table 2            EKF ANEES  |  7500.0 -> 7540
+R3.UKF.med         PASS    Table 2            UKF median final error [km]  |  3.82 -> 3.822
+R3.UKF.max         PASS    Table 2            UKF max final error [km]  |  241.9 -> 241.9
+R3.UKF.anees       PASS    Table 2            UKF ANEES  |  1000.0 -> 1021
+R3.GM-UKF.med      PASS    Table 2            GM-UKF median final error [km]  |  1.5 -> 1.504
+R3.GM-UKF.max      PASS    Table 2            GM-UKF max final error [km]  |  4.2 -> 4.223
+R3.GM-UKF.anees    PASS    Table 2            GM-UKF ANEES  |  7.0 -> 6.963
+R3.PF→UKF.med      PASS    Table 2            PF→UKF median final error [km]  |  1.5 -> 1.493
+R3.PF→UKF.max      PASS    Table 2            PF→UKF max final error [km]  |  18.5 -> 18.49
+R3.PF→UKF.anees    PASS    Table 2            PF→UKF ANEES  |  21.2 -> 21.18
+R4                 PASS    Sec 6              GM-UKF max components (L1)  |  27 -> 27
+R9                 PASS    Sec 6              other orbits: EKF/UKF/GM-UKF runs consistent [%]  |  (99, 100) -> 99-100
+R10                PASS    Sec 6              other orbits: PF→UKF runs consistent [%]  |  (96, 98) -> 96-98
+R5                 PASS    Sec 6              GM-UKF mean components (L1)  |  3.1 -> 3.147
+R6                 PASS    Discussion         GM-UKF costs about twice a UKF (1.5-2.5x)  |  True -> 1.92x   [wall-clock, machine dependent]
+R7                 PASS    Sec 6              PF particles inside Gaussian 99% ellipsoids at first measurement [%]  |  (96, 98) -> 96.27-98.1
+R8                 PASS    Sec 6              L1 prior cloud 1-99% span [10^3 km]  |  (31, 10) -> 31-9.935
+K0                 PASS    Sec 4              number of custody cases  |  525 -> 525
+K0b                PASS    Sec 4              number of distinct arcs among the custody cases  |  394 -> 394
+K1.L1.1.s0         PASS    Table 3            L1 1-d median sigma0 [km]  |  20.0 -> 19.95
+K1.L1.1.N1         PASS    Table 3            L1 1-d T_c(N=1) median (p10-p90)  |  8.8 (5.5-10.0) -> 8.8 (5.5-10.0)   [n=23]
+K1.L1.1.N10        PASS    Table 3            L1 1-d T_c(N=10) median (p10-p90)  |  10.9 (7.3-11.6) -> 10.9 (7.3-11.6)   [n=23]
+K1.L1.1.N100       PASS    Table 3            L1 1-d T_c(N=100) median (p10-p90)  |  13.1 (9.6-13.7) -> 13.1 (9.6-13.7)   [n=23]
+K1.L1.3.s0         PASS    Table 3            L1 3-d median sigma0 [km]  |  5.1 -> 5.115
+K1.L1.3.N1         PASS    Table 3            L1 3-d T_c(N=1) median (p10-p90)  |  11.7 (8.0-12.4) -> 11.7 (8.0-12.4)   [n=22]
+K1.L1.3.N10        PASS    Table 3            L1 3-d T_c(N=10) median (p10-p90)  |  13.2 (10.2-14.3) -> 13.2 (10.2-14.3)   [n=22]
+K1.L1.3.N100       PASS    Table 3            L1 3-d T_c(N=100) median (p10-p90)  |  15.1 (13.4-17.0) -> 15.1 (13.4-17.0)   [n=22]
+K1.L1.7.s0         PASS    Table 3            L1 7-d median sigma0 [km]  |  0.7 -> 0.7252
+K1.L1.7.N1         PASS    Table 3            L1 7-d T_c(N=1) median (p10-p90)  |  14.4 (13.1-15.2) -> 14.4 (13.1-15.2)   [n=22]
+K1.L1.7.N10        PASS    Table 3            L1 7-d T_c(N=10) median (p10-p90)  |  16.5 (14.6-18.4) -> 16.5 (14.6-18.4)   [n=22]
+K1.L1.7.N100       PASS    Table 3            L1 7-d T_c(N=100) median (p10-p90)  |  18.4 (16.6-19.7) -> 18.4 (16.6-19.7)   [n=22]
+K1.L2.1.s0         PASS    Table 3            L2 1-d median sigma0 [km]  |  30.2 -> 30.2
+K1.L2.1.N1         PASS    Table 3            L2 1-d T_c(N=1) median (p10-p90)  |  9.5 (7.7-11.2) -> 9.5 (7.7-11.2)   [n=23]
+K1.L2.1.N10        PASS    Table 3            L2 1-d T_c(N=10) median (p10-p90)  |  12.4 (9.9-15.3) -> 12.4 (9.9-15.3)   [n=23]
+K1.L2.1.N100       PASS    Table 3            L2 1-d T_c(N=100) median (p10-p90)  |  16.0 (13.1-18.4) -> 16.0 (13.1-18.4)   [n=23]
+K1.L2.3.s0         PASS    Table 3            L2 3-d median sigma0 [km]  |  15.5 -> 15.46
+K1.L2.3.N1         PASS    Table 3            L2 3-d T_c(N=1) median (p10-p90)  |  10.5 (9.1-13.4) -> 10.5 (9.1-13.4)   [n=23]
+K1.L2.3.N10        PASS    Table 3            L2 3-d T_c(N=10) median (p10-p90)  |  14.9 (11.2-16.3) -> 14.9 (11.2-16.3)   [n=23]
+K1.L2.3.N100       PASS    Table 3            L2 3-d T_c(N=100) median (p10-p90)  |  18.3 (15.6-19.0) -> 18.3 (15.6-19.0)   [n=23]
+K1.L2.7.s0         PASS    Table 3            L2 7-d median sigma0 [km]  |  7.0 -> 7.009
+K1.L2.7.N1         PASS    Table 3            L2 7-d T_c(N=1) median (p10-p90)  |  13.8 (12.3-15.7) -> 13.8 (12.3-15.7)   [n=22]
+K1.L2.7.N10        PASS    Table 3            L2 7-d T_c(N=10) median (p10-p90)  |  16.7 (15.5-18.4) -> 16.7 (15.5-18.4)   [n=22]
+K1.L2.7.N100       PASS    Table 3            L2 7-d T_c(N=100) median (p10-p90)  |  19.2 (18.3-21.3) -> 19.2 (18.3-21.3)   [n=22]
+K1.NRHO.1.s0       PASS    Table 3            NRHO 1-d median sigma0 [km]  |  23.8 -> 23.75
+K1.NRHO.1.N1       PASS    Table 3            NRHO 1-d T_c(N=1) median (p10-p90)  |  >30 (17.2->30) -> >30 (17.2->30)   [n=21]
+K1.NRHO.1.N10      PASS    Table 3            NRHO 1-d T_c(N=10) median (p10-p90)  |  >30 (18.2->30) -> >30 (18.2->30)   [n=21]
+K1.NRHO.1.N100     PASS    Table 3            NRHO 1-d T_c(N=100) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=21]
+K1.NRHO.3.s0       PASS    Table 3            NRHO 3-d median sigma0 [km]  |  3.9 -> 3.886
+K1.NRHO.3.N1       PASS    Table 3            NRHO 3-d T_c(N=1) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=23]
+K1.NRHO.3.N10      PASS    Table 3            NRHO 3-d T_c(N=10) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=23]
+K1.NRHO.3.N100     PASS    Table 3            NRHO 3-d T_c(N=100) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=23]
+K1.NRHO.7.s0       PASS    Table 3            NRHO 7-d median sigma0 [km]  |  0.9 -> 0.8897
+K1.NRHO.7.N1       PASS    Table 3            NRHO 7-d T_c(N=1) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=23]
+K1.NRHO.7.N10      PASS    Table 3            NRHO 7-d T_c(N=10) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=23]
+K1.NRHO.7.N100     PASS    Table 3            NRHO 7-d T_c(N=100) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=23]
+K1.DRO.1.s0        PASS    Table 3            DRO 1-d median sigma0 [km]  |  31.8 -> 31.82
+K1.DRO.1.N1        PASS    Table 3            DRO 1-d T_c(N=1) median (p10-p90)  |  >30 (7.8->30) -> >30 (7.8->30)   [n=23]
+K1.DRO.1.N10       PASS    Table 3            DRO 1-d T_c(N=10) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=23]
+K1.DRO.1.N100      PASS    Table 3            DRO 1-d T_c(N=100) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=23]
+K1.DRO.3.s0        PASS    Table 3            DRO 3-d median sigma0 [km]  |  11.7 -> 11.69
+K1.DRO.3.N1        PASS    Table 3            DRO 3-d T_c(N=1) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=23]
+K1.DRO.3.N10       PASS    Table 3            DRO 3-d T_c(N=10) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=23]
+K1.DRO.3.N100      PASS    Table 3            DRO 3-d T_c(N=100) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=23]
+K1.DRO.7.s0        PASS    Table 3            DRO 7-d median sigma0 [km]  |  1.4 -> 1.384
+K1.DRO.7.N1        PASS    Table 3            DRO 7-d T_c(N=1) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=23]
+K1.DRO.7.N10       PASS    Table 3            DRO 7-d T_c(N=10) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=23]
+K1.DRO.7.N100      PASS    Table 3            DRO 7-d T_c(N=100) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=23]
+K2                 PASS    Sec 7              NRHO & DRO median 99% sky radius < 0.01 deg at 30 d (7-d arcs)  |  True -> 0.0071 deg
+K3                 PASS    Sec 8              minimum median UT containment, L1 & L2 (7-d arcs) [%]  |  (68, 70) -> 67.67-69.5
+K3b                PASS    Sec 8              gap at which median UT containment first drops below 95% [d]  |  (18, 22) -> 18.4-21.66
+K13a               PASS    Sec 8 / abstract   L1: gap where median linear containment first < 95% [d]  |  9.6 -> 9.587
+K13b               PASS    Sec 8              L2: gap where median linear containment first < 95% [d]  |  18.4 -> 18.4
+K4                 PASS    Sec 8              L1 linear 99% ellipse containment at 14 d, median over all L1 arcs [%]  |  7.6 -> 7.602
+K5                 PASS    Sec 8              L1 UT containment at 14 d, median over all L1 arcs [%]  |  98 -> 98.03
+K6                 PASS    Sec 7              gain from 10 -> 100 fields, unstable orbits [d]  |  (1.8, 3.6) -> 1.839-3.567
+K7                 PASS    Sec 7              7-d arcs: median T_c for N=1..100, unstable [d]  |  (13.8, 19.2) -> 13.8-19.24
+K8                 PASS    abstract / Sec 10  median T_c(N=10), unstable orbits, all arcs [d]  |  (10.9, 16.7) -> 10.9-16.7
+K9.NRHO.1          PASS    Table 4            NRHO 1-d blackouts: n, median length, survived N=1/10/100/UT  |  9 / 10.5 / 78 / 78 / 78 / 78 -> 9 / 10.5 / 77.8 / 77.8 / 77.8 / 77.8   [N=10 survival 95% CI 45-94%]
+K9.NRHO.3          PASS    Table 4            NRHO 3-d blackouts: n, median length, survived N=1/10/100/UT  |  11 / 10.5 / 100 / 100 / 100 / 100 -> 11 / 10.5 / 100 / 100 / 100 / 100   [N=10 survival 95% CI 74-100%]
+K9.NRHO.7          PASS    Table 4            NRHO 7-d blackouts: n, median length, survived N=1/10/100/UT  |  11 / 10.5 / 100 / 100 / 100 / 100 -> 11 / 10.5 / 100 / 100 / 100 / 100   [N=10 survival 95% CI 74-100%]
+K9.L1.1            PASS    Table 4            L1 1-d blackouts: n, median length, survived N=1/10/100/UT  |  27 / 3.1 / 67 / 89 / 93 / 89 -> 27 / 3.08 / 66.7 / 88.9 / 92.6 / 88.9   [N=10 survival 95% CI 72-96%]
+K9.L1.3            PASS    Table 4            L1 3-d blackouts: n, median length, survived N=1/10/100/UT  |  27 / 3.1 / 93 / 96 / 96 / 96 -> 27 / 3.08 / 92.6 / 96.3 / 96.3 / 96.3   [N=10 survival 95% CI 82-99%]
+K9.L1.7            PASS    Table 4            L1 7-d blackouts: n, median length, survived N=1/10/100/UT  |  28 / 3.1 / 100 / 100 / 100 / 100 -> 28 / 3.14 / 100 / 100 / 100 / 100   [N=10 survival 95% CI 88-100%]
+K9.L2.1            PASS    Table 4            L2 1-d blackouts: n, median length, survived N=1/10/100/UT  |  34 / 4.1 / 65 / 74 / 94 / 74 -> 34 / 4.13 / 64.7 / 73.5 / 94.1 / 73.5   [N=10 survival 95% CI 57-85%]
+K9.L2.3            PASS    Table 4            L2 3-d blackouts: n, median length, survived N=1/10/100/UT  |  34 / 4.1 / 79 / 97 / 97 / 97 -> 34 / 4.13 / 79.4 / 97.1 / 97.1 / 97.1   [N=10 survival 95% CI 85-99%]
+K9.L2.7            PASS    Table 4            L2 7-d blackouts: n, median length, survived N=1/10/100/UT  |  34 / 4.1 / 91 / 100 / 100 / 100 -> 34 / 4.13 / 91.2 / 100 / 100 / 100   [N=10 survival 95% CI 90-100%]
+K9.DRO.1           PASS    Table 4            DRO 1-d blackouts: n, median length, survived N=1/10/100/UT  |  13 / 11.3 / 54 / 85 / 85 / 85 -> 13 / 11.3 / 53.8 / 84.6 / 84.6 / 84.6   [N=10 survival 95% CI 58-96%]
+K9.DRO.3           PASS    Table 4            DRO 3-d blackouts: n, median length, survived N=1/10/100/UT  |  13 / 11.3 / 100 / 100 / 100 / 100 -> 13 / 11.3 / 100 / 100 / 100 / 100   [N=10 survival 95% CI 77-100%]
+K9.DRO.7           PASS    Table 4            DRO 7-d blackouts: n, median length, survived N=1/10/100/UT  |  13 / 11.3 / 100 / 100 / 100 / 100 -> 13 / 11.3 / 100 / 100 / 100 / 100   [N=10 survival 95% CI 77-100%]
+K10.1              PASS    abstract           blackouts survived (N=10) after 1-d arcs, all orbits [%]  |  (74, 89) -> 73.53-88.89
+K10.3              PASS    abstract           blackouts survived (N=10) after 3-d arcs, all orbits [%]  |  (96, 100) -> 96.3-100
+K10.7              PASS    abstract           blackouts survived (N=10) after 7-d arcs, all orbits [%]  |  (100, 100) -> 100-100
+K12                PASS    info               linear false-custody share at N=10 (not in paper)  |  - -> 1.6% of 254 cases   [information only]
+K11                PASS    Sec 8              UT never gives false custody at N=10 (claim > 1.1 x actual)  |  True -> 0.0% of 254 cases
+P1.ut_claim.N1     PASS    Sec 8 / abstract   log-R2 of ut_claim predictor, N=1  |  0.97 -> 0.9694   [n=268; CI 0.90-1.00]
+P1.lin_claim.N1    PASS    Sec 8 / abstract   log-R2 of lin_claim predictor, N=1  |  0.97 -> 0.9691   [n=268; CI 0.90-1.00]
+P1.ut_claim.N10    PASS    Sec 8 / abstract   log-R2 of ut_claim predictor, N=10  |  1.0 -> 0.9963   [n=254; CI 0.99-1.00]
+P1.lin_claim.N10   WEAK    Sec 8 / abstract   log-R2 of lin_claim predictor, N=10  |  0.93 -> 0.9264   [n=254; bootstrap 95% CI 0.81-0.99]
+P1.ut_claim.N100   WEAK    Sec 8 / abstract   log-R2 of ut_claim predictor, N=100  |  0.9 -> 0.8971   [n=253; bootstrap 95% CI 0.74-0.98]
+P1.lin_claim.N100  PASS    Sec 8 / abstract   log-R2 of lin_claim predictor, N=100  |  0.95 -> 0.9508   [n=253; CI 0.91-0.97]
+P2                 PASS    Sec 8              log-R2 of orbit-only FTLE predictor, N=1..100  |  (-0.24, 0.04) -> -0.2425-0.04427
+P3                 PASS    Sec 8              number of distinct arcs used for the R2 values  |  (250, 268) -> 250-268
+E1                 PASS    Sec 9              L1/L2/DRO counterparts continuous to < 0.4 m  |  True -> max 0.366 m
+E2                 PASS    Sec 9              median deviation from CR3BP shape, L1/L2/DRO [km]  |  (3500, 5200) -> 3558-5209
+E3                 PASS    Sec 9              NRHO continuity residual median-max [km]  |  (50, 124) -> 49.79-123.5
+E4                 PASS    Sec 9              number of ephemeris cases  |  60 -> 60
+E5.NRHO.1          PASS    Table 5            NRHO 1-d: n, T_c CR3BP, T_c ephem, ratio  |  8 / >30 / >30 / 0.98 -> 8 / >30 / >30 / 0.98
+E5.NRHO.7          PASS    Table 5            NRHO 7-d: n, T_c CR3BP, T_c ephem, ratio  |  7 / >30 / >30 / None -> 7 / >30 / >30 / -
+E5.L1.1            WEAK    Table 5            L1 1-d: n, T_c CR3BP, T_c ephem, ratio  |  4 / 8.5 / 7.8 / 0.93 -> 4 / 8.5 / 7.8 / 0.93   [only n=4 cases]
+E5.L1.7            PASS    Table 5            L1 7-d: n, T_c CR3BP, T_c ephem, ratio  |  11 / 16.0 / 15.9 / 1.01 -> 11 / 16.0 / 15.9 / 1.01
+E5.L2.1            PASS    Table 5            L2 1-d: n, T_c CR3BP, T_c ephem, ratio  |  6 / 12.4 / 11.3 / 0.95 -> 6 / 12.4 / 11.3 / 0.95
+E5.L2.7            PASS    Table 5            L2 7-d: n, T_c CR3BP, T_c ephem, ratio  |  9 / 15.9 / 16.4 / 0.99 -> 9 / 15.9 / 16.4 / 0.99
+E5.DRO.1           PASS    Table 5            DRO 1-d: n, T_c CR3BP, T_c ephem, ratio  |  6 / >30 / >30 / 1.0 -> 6 / >30 / >30 / 1.00
+E5.DRO.7           PASS    Table 5            DRO 7-d: n, T_c CR3BP, T_c ephem, ratio  |  9 / >30 / >30 / None -> 9 / >30 / >30 / -
+E6                 PASS    abstract / Sec 9   range of median ephemeris/CR3BP T_c ratios  |  (0.93, 1.01) -> 0.9328-1.009
+E4b                PASS    Sec 9              distinct arcs among the ephemeris cases  |  59 -> 59
+E7                 PASS    Sec 9              distinct arcs whose T_c(N=10) changes by > 3 d (or crosses 30 d)  |  5 -> 5
+E8                 PASS    Sec 9              blackout groups whose survival count differs CR3BP vs ephemeris  |  2 -> 2   [L1 1d: 2/4 -> 1/4; L2 7d: 4/4 -> 3/4]
+E9.N1              PASS    Sec 9              ephemeris UT log-R2, N=1  |  1.0 -> 0.9979
+E9.N10             PASS    Sec 9              ephemeris UT log-R2, N=10  |  1.0 -> 0.9992
+E9.N100            WEAK    Sec 9              ephemeris UT log-R2, N=100  |  0.68 -> 0.6824   [n=28; bootstrap 95% CI 0.25-0.99]
+E10.L1.contain_lin_ephem_14d PASS    Sec 9              L1 contain_lin_ephem_14d median [%]  |  15.5 -> 15.5
+E10.L2.contain_lin_ephem_14d PASS    Sec 9              L2 contain_lin_ephem_14d median [%]  |  70.8 -> 70.78
+E10.L2.contain_lin_cr3bp_14d PASS    Sec 9              L2 contain_lin_cr3bp_14d median [%]  |  98.9 -> 98.87
+E11                PASS    Sec 9              ephemeris UT containment at 14 d, all orbits [%]  |  (97, 99) -> 97.33-99
+S1                 PASS    Sec 10 limitations T_c converged in Monte Carlo sample size (300 vs larger sample)  |  None -> n2000 samples, 17 cases   [N=1: median |dT_c| 0.11 d (2.1%), max 0.62 d; N=10: median |dT_c| 0.13 d (1.2%), max 0.44 d; N=100: median |dT_c| 0.16 d (1.2%), max 11.50 d]
+S2                 PASS    Sec 10             arcs in the sample-size check  |  17 -> 17
+S3                 PASS    Sec 10             median |dT_c| 300 vs 2000 samples, N=1..100 [d]  |  (0.1, 0.2) -> 0.1145-0.1649
+S4                 PASS    Sec 10             max |dT_c| for N<=10 [d]  |  0.6 -> 0.6155
+--------------------------------------------------------------------------------------------------------------
+summary: WEAK 4, PASS 206
