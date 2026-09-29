@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cislunar-custody"
+version = "0.1.0"
+description = "Custody horizons for ground-based angles-only tracking of cislunar periodic orbits"
+authors = [{ name = "Bishwaswarup Nayak", email = "bishwaswarup@iisc.ac.in" }]
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "scipy>=1.10", "matplotlib>=3.7"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+markers = ["slow: long-running tests (family continuation)"]
