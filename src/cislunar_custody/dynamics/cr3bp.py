@@ -80,6 +80,33 @@ def jacobian(s, mu):
     return A
 
 
+def eom_many(t, Y, mu):
+    """Vectorised EOM for k stacked states: Y = [s_1, ..., s_k] (6k,)."""
+    S = Y.reshape(-1, 6)
+    x, y, z, vx, vy, vz = S.T
+    r1 = np.sqrt((x + mu) ** 2 + y ** 2 + z ** 2)
+    r2 = np.sqrt((x - 1.0 + mu) ** 2 + y ** 2 + z ** 2)
+    c1 = (1.0 - mu) / r1 ** 3
+    c2 = mu / r2 ** 3
+    out = np.empty_like(S)
+    out[:, 0], out[:, 1], out[:, 2] = vx, vy, vz
+    out[:, 3] = 2.0 * vy + x - c1 * (x + mu) - c2 * (x - 1.0 + mu)
+    out[:, 4] = -2.0 * vx + y - (c1 + c2) * y
+    out[:, 5] = -(c1 + c2) * z
+    return out.ravel()
+
+
+def propagate_many(S0, dt, mu, rtol=1e-10, atol=1e-12, method="DOP853"):
+    """Propagate k states (k, 6) together by dt [TU]; returns (k, 6)."""
+    S0 = np.atleast_2d(np.asarray(S0, float))
+    if dt == 0.0:
+        return S0.copy()
+    sol = solve_ivp(eom_many, (0.0, dt), S0.ravel(), method=method, args=(mu,), rtol=rtol, atol=atol)
+    if not sol.success:
+        raise RuntimeError(f"CR3BP integration failed: {sol.message}")
+    return sol.y[:, -1].reshape(-1, 6)
+
+
 def eom_stm(t, y, mu):
     """State + STM equations: y = [s (6), vec(Phi) (36)], dPhi/dt = A Phi."""
     s = y[:6]
