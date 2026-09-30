@@ -40,7 +40,7 @@ from cislunar_custody.plotstyle import (use_jas_style, save, panel_label, SINGLE
 DAYS, ARCS_D, MIN_BLACKOUT_D = 365, (1.0, 3.0, 7.0), 2.0
 TEL, NET, EXCL, SIGMA = "1m", "Tri-3+S", 5.0, 1.0
 FOV_DEG, N_FIELDS = 1.0, (1, 10, 100)
-DT_DAYS = np.concatenate([[0.0], np.geomspace(0.1, 30.0, 36)])
+DT_DAYS = np.concatenate([[0.0], np.geomspace(0.1, 30.0, 120)])
 METHODS = ("ideal", "lin_claim", "lin_actual", "ut_claim", "ut_actual", "ftle")
 COLS = {o: st["color"] for o, st in ORBIT_STYLE.items()}
 CURVES = ROOT / "data" / "custody_curves.npz"

@@ -50,10 +50,29 @@ Target journal: *The Journal of the Astronautical Sciences* (Springer). Build th
 
 | Claim | Why it is thin | Where it is disclosed |
 | :-- | :-- | :-- |
-| UT predictor log-R² = 0.90 at N = 100 | bootstrap 95 % CI 0.74–0.98 | Sec. 8 gives the interval |
-| Linear predictor log-R² = 0.93 at N = 10 | bootstrap 95 % CI 0.81–0.99 | not given in the text; fine as supporting evidence only |
-| Ephemeris UT log-R² = 0.68 at N = 100 | only 28 finite cases, CI 0.25–0.99 | Sec. 9 gives n and the interval |
+| UT and linear predictor log-R² = 0.96 at N = 1 | bootstrap 95 % CI 0.87–1.00 | Sec. 8 gives the interval |
+| UT predictor log-R² = 0.93 at N = 100 | bootstrap 95 % CI 0.85–0.98 | Sec. 8 gives the interval |
+| Ephemeris UT log-R² = 0.90 at N = 1 | 42 finite cases, CI 0.59–1.00 | Sec. 9 gives n and the interval |
+| Ephemeris UT log-R² = 0.80 at N = 100 | 30 finite cases, CI 0.55–0.99 | Sec. 9 gives n and the interval |
 | Ephemeris, L1 halo, 1-day arcs | only 4 cases | Table 5 column n |
+
+## Numbers that changed with the 121-point gap grid (m8-fixes)
+
+The gap grid went from 37 to 121 points (0 plus 120 log-spaced values in 0.1–30 d). The 37-point
+grid missed the NRHO perilune spikes in the sky radius. A uniform 0.02-d grid changes T_c by at most
+0.15 d (N = 1, 10) and 0.6 d (N = 100), so the 121-point grid is converged.
+
+- Table 3: most cells move by 0.1–0.7 d. NRHO 1-d N = 1 lower percentile 17.2 → 5.3 d (perilune).
+- Table 4: NRHO 1-d N = 1 survival 78 → 67 %; DRO 1-d N = 1 54 → 46 %.
+- Table 5: NRHO 1-d ephemeris median >30 → 28.3 d; small shifts elsewhere.
+- UT false custody: "never" → 2 of 254 distinct arcs.
+- Linear containment at 14 d (L1): 7.6 → 5.4 %. Linear < 95 %: 9.6 → 9.5 d (L1), 18.4 → 18.6 d (L2).
+- UT containment minima 68–70 → 66–72 %, first below 95 % at 18.6–19.5 d.
+- Predictor log-R²: UT 0.96 / 1.00 / 0.93, linear 0.96 / 0.99 / 0.97; FTLE −0.23 to 0.04.
+- Ephemeris: 6 (was 5) of 59 arcs shift > 3 d; UT log-R² 0.90 / 1.00 / 0.80; linear containment
+  "worse in the ephemeris model" now holds only for L2 (84.8 % vs 98.6 %); L1 is 12.6 % vs 10.3 %.
+- Sample size: N = 10, 100 at most 0.9 d; the N = 1 worst case is an NRHO arc at perilune (5.3 → 17.6 d).
+- New rule 5 in the Discussion: time narrow NRHO searches away from perilune.
 
 ## Numbers that changed after re-verification (draft v1 → this version)
 

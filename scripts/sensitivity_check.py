@@ -32,6 +32,9 @@ from cislunar_custody.sensors import SITES, NETWORKS, TELESCOPES, network_visibi
 from cislunar_custody.timeutil import jd_from_iso, jd_grid, tu_from_jd  # noqa: E402
 
 
+OLD_GRID = np.concatenate([[0.0], np.geomspace(0.1, 30.0, 36)])   # grid used before the switch to 121 points
+
+
 def pick(rows, per_orbit):
     """Cases with a finite ideal horizon (N=10) spread over the range, per orbit; orbits
     whose horizons are all beyond 30 d get phase cases with 1-day arcs (largest sigma0)."""
@@ -102,9 +105,8 @@ def main(per_orbit, n_big):
                 if n == 300:
                     ts = strip_horizon(pred, N)
                     row[f"tc_strip_n300_N{N}"] = ts * TU_S / DAY_S if np.isfinite(ts) else np.inf
-        fine = np.concatenate([[0.0], np.geomspace(0.1, 30.0, 120)])
         uni = np.arange(0.0, 30.0 + 1e-9, 0.02)        # every 0.02 d = 29 min, 1501 points
-        for tag, grid in (("fine", fine), ("uni", uni)):
+        for tag, grid in (("old", OLD_GRID), ("uni", uni)):
             pf = predict_gap(x_end, res.P_end, grid * DAY_S / TU_S, jd[i_end], MU_EM, n_samples=300,
                              rng=np.random.default_rng(i_end), strips=strips)
             for N in N_FIELDS:
@@ -136,8 +138,8 @@ def main(per_orbit, n_big):
         print(f"  N={N:3d}: reproduces csv: {'yes' if rep else 'NO'};  |dT_c| median {np.median(d):.2f} d, "
               f"max {d.max():.2f} d;  relative median {100 * np.median(rel):.1f}%, max {100 * rel.max():.1f}%;  "
               f"finite/inf flips {int(np.sum(np.isfinite(a) != np.isfinite(b)))}")
-    for title, pairs in (("37-point vs 121-point", (("tc_n300", "tc_fine"), ("tc_strip_n300", "tc_strip_fine"))),
-                         ("121-point vs uniform 0.02 d (1501-point)", (("tc_fine", "tc_uni"), ("tc_strip_fine", "tc_strip_uni")))):
+    for title, pairs in (("37-point vs 121-point", (("tc_old", "tc_n300"), ("tc_strip_old", "tc_strip_n300"))),
+                         ("121-point vs uniform 0.02 d (1501-point)", (("tc_n300", "tc_uni"), ("tc_strip_n300", "tc_strip_uni")))):
         print(f"\nGrid convergence (same 300 samples and seed, {title} gap grid): |change| in T_c [d]")
         for N in N_FIELDS:
             for lab, (k0, k1) in zip(("circle", "strip "), pairs):
