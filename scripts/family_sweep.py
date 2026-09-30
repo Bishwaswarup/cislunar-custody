@@ -140,6 +140,11 @@ def main(n_members, step_days, arcs, n_samples, seed):
                                 "strip": strip_horizon(pred, N)}
                         for k, v in vals.items():
                             row[f"tc_{k}_N{N}"] = v * TU_S / DAY_S if np.isfinite(v) else np.inf
+                    # shape of the true cloud along/across the strip, where the 10-field circle loses custody
+                    t_ref = row["tc_ideal_N10"] if np.isfinite(row["tc_ideal_N10"]) else DT_DAYS[-1]
+                    row["strip_along99_deg"] = float(np.interp(t_ref, DT_DAYS, pred["strip_along99_deg"]))
+                    row["strip_cross99_arcsec"] = float(np.interp(t_ref, DT_DAYS, pred["strip_cross99_deg"]) * 3600)
+                    row["ut_axis_ratio"] = float(np.interp(t_ref, DT_DAYS, pred["ut_axis_ratio"]))
                     rows.append(row)
                     n_ok += 1
             print(f"  {fname:14s} #{idx:3d}  nu {info['stability']:8.1f}  T {info['period_d']:5.1f} d  "
@@ -192,6 +197,26 @@ def report(rows):
             b = np.minimum(np.array([r[f"tc_{k}_N{N}"] for r in rows]), 30.0)
             cells.append(f"{k} {np.median(b[ok] / a[ok]):.2f}")
         print(f"  N={N:3d} (n={ok.sum()}): " + "   ".join(cells))
+    print("\nWhere the strip outlasts the circle (N=10, strip > ideal + 3 d or beyond 30 d while ideal < 30 d):")
+    a = np.array([r["tc_ideal_N10"] for r in rows])
+    b = np.array([r["tc_strip_N10"] for r in rows])
+    fin = np.isfinite(a) & (a < 30)
+    gain = fin & (~np.isfinite(b) | (b > a + 3.0))
+    beyond = fin & ~np.isfinite(b)
+    print(f"  {gain.sum()} of {fin.sum()} cases gain > 3 d; {beyond.sum()} of them go beyond 30 d")
+    if gain.any() and "strip_cross99_arcsec" in rows[0]:
+        g = [r for r, x in zip(rows, gain) if x]
+        o = [r for r, x, y in zip(rows, fin, gain) if x and not y]
+        for lab, sel in (("gaining cases", g), ("other cases", o)):
+            if sel:
+                print(f"  {lab:14s} at the circle's horizon: along-track 99% {np.median([r['strip_along99_deg'] for r in sel]):5.2f} deg, "
+                      f"cross-track 99% {np.median([r['strip_cross99_arcsec'] for r in sel]):8.1f} arcsec, "
+                      f"axis ratio {np.median([r['ut_axis_ratio'] for r in sel]):.1e}  (medians, n={len(sel)})")
+        fams = {}
+        for r in g:
+            fams[r["family"]] = fams.get(r["family"], 0) + 1
+        print("  gaining cases by family: " + ", ".join(f"{k} {v}" for k, v in fams.items()))
+
     print("\nDoes the stability index organise the horizon? Rank correlation of member median T_c "
           "(strip, N=10) with log10(nu), members with nu > 1.01")
 
