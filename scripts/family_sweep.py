@@ -24,8 +24,9 @@ from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import numpy as np
-from scipy.stats import spearmanr
+from scipy.stats import kendalltau, spearmanr
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -139,6 +140,11 @@ def main(n_members, step_days, arcs, n_samples, seed):
                                 "strip": strip_horizon(pred, N)}
                         for k, v in vals.items():
                             row[f"tc_{k}_N{N}"] = v * TU_S / DAY_S if np.isfinite(v) else np.inf
+                    # shape of the true cloud along/across the strip, where the 10-field circle loses custody
+                    t_ref = row["tc_ideal_N10"] if np.isfinite(row["tc_ideal_N10"]) else DT_DAYS[-1]
+                    row["strip_along99_deg"] = float(np.interp(t_ref, DT_DAYS, pred["strip_along99_deg"]))
+                    row["strip_cross99_arcsec"] = float(np.interp(t_ref, DT_DAYS, pred["strip_cross99_deg"]) * 3600)
+                    row["ut_axis_ratio"] = float(np.interp(t_ref, DT_DAYS, pred["ut_axis_ratio"]))
                     rows.append(row)
                     n_ok += 1
             print(f"  {fname:14s} #{idx:3d}  nu {info['stability']:8.1f}  T {info['period_d']:5.1f} d  "
@@ -191,19 +197,58 @@ def report(rows):
             b = np.minimum(np.array([r[f"tc_{k}_N{N}"] for r in rows]), 30.0)
             cells.append(f"{k} {np.median(b[ok] / a[ok]):.2f}")
         print(f"  N={N:3d} (n={ok.sum()}): " + "   ".join(cells))
-    print("\nDoes the stability index organise the horizon? Spearman rank correlation of member median T_c "
+    print("\nWhere the strip outlasts the circle (N=10, strip > ideal + 3 d or beyond 30 d while ideal < 30 d):")
+    a = np.array([r["tc_ideal_N10"] for r in rows])
+    b = np.array([r["tc_strip_N10"] for r in rows])
+    fin = np.isfinite(a) & (a < 30)
+    gain = fin & (~np.isfinite(b) | (b > a + 3.0))
+    beyond = fin & ~np.isfinite(b)
+    print(f"  {gain.sum()} of {fin.sum()} cases gain > 3 d; {beyond.sum()} of them go beyond 30 d")
+    if gain.any() and "strip_cross99_arcsec" in rows[0]:
+        g = [r for r, x in zip(rows, gain) if x]
+        o = [r for r, x, y in zip(rows, fin, gain) if x and not y]
+        for lab, sel in (("gaining cases", g), ("other cases", o)):
+            if sel:
+                print(f"  {lab:14s} at the circle's horizon: along-track 99% {np.median([r['strip_along99_deg'] for r in sel]):5.2f} deg, "
+                      f"cross-track 99% {np.median([r['strip_cross99_arcsec'] for r in sel]):8.1f} arcsec, "
+                      f"axis ratio {np.median([r['ut_axis_ratio'] for r in sel]):.1e}  (medians, n={len(sel)})")
+        fams = {}
+        for r in g:
+            fams[r["family"]] = fams.get(r["family"], 0) + 1
+        print("  gaining cases by family: " + ", ".join(f"{k} {v}" for k, v in fams.items()))
+
+    print("\nDoes the stability index organise the horizon? Rank correlation of member median T_c "
           "(strip, N=10) with log10(nu), members with nu > 1.01")
+
+    def _corr(label, m, key="strip"):
+        m = [x for x in m if np.isfinite(x[key])]
+        if len(m) < 4:
+            print(f"    {label:28s} too few members ({len(m)})")
+            return
+        lx = np.log10([x["stability"] for x in m])
+        y = [x[key] for x in m]
+        rho, p = spearmanr(lx, y)
+        tau, pt = kendalltau(lx, y)
+        print(f"    {label:28s} rho = {rho:5.2f} (p = {p:.2g}), tau = {tau:5.2f} (p = {pt:.2g}), n = {len(m)}")
+
     for arc in arcs:
         m = [x for x in member_table(rows, arc) if x["stability"] > 1.01 and np.isfinite(x["strip"])]
-        if len(m) >= 4:
-            rho, p = spearmanr(np.log10([x["stability"] for x in m]), [x["strip"] for x in m])
-            print(f"  {arc:.0f}-day arcs: rho = {rho:5.2f} (p = {p:.2g}, {len(m)} members)")
+        ncap = sum(x["strip"] >= 30 for x in m)
+        print(f"  {arc:.0f}-day arcs: {ncap} of {len(m)} members capped at 30 d (strip)")
+        _corr("all members", m)
+        _corr("nu > 10 only", [x for x in m if x["stability"] > 10])
+        for fam in FAMILIES:
+            _corr(f"family {fam}", [x for x in m if x["family"] == fam])
+        print("    UT-centred circle horizon:")
+        _corr("all members", m, "utc")
+        _corr("nu > 10 only", [x for x in m if x["stability"] > 10], "utc")
 
 
 def plots(rows):
     use_jas_style()
     arc = max(r["arc_d"] for r in rows)
     fig, ax = plt.subplots(figsize=(DOUBLE, 0.45 * DOUBLE))
+    handles = []
     for fam, (lab, col, mk) in FAMILIES.items():
         mt = [m for m in member_table([r for r in rows if r["family"] == fam], arc)]
         if not mt:
@@ -214,14 +259,23 @@ def plots(rows):
             v = np.minimum([r["tc_strip_N10"] for r in sel], 35.0)
             lo, hi = np.percentile(v, [10, 90])
             ax.plot([m["stability"]] * 2, [lo, hi], color=col, lw=0.6, alpha=0.7)
-        y = np.array([35.0 if m["strip"] >= 30 else m["strip"] for m in mt])
-        ax.semilogx(x, y, ls="none", marker=mk, ms=4, color=col,
-                    mfc="none" if fam in ("L1_lyapunov", "L2_lyapunov") else col, label=lab)
+        y = np.array([m["strip"] for m in mt])
+        cap = np.array([m["strip"] >= 30 for m in mt])
+        ofc = "none" if fam in ("L1_lyapunov", "L2_lyapunov") else col
+        ax.semilogx(x[~cap], y[~cap], ls="none", marker=mk, ms=4, color=col, mfc=ofc)
+        if cap.any():
+            ax.semilogx(x[cap], np.full(cap.sum(), 33.0), ls="none", marker=mk, ms=4, mfc="none", mew=0.8, color=col)
+            for xi in x[cap]:
+                ax.annotate("", xy=(xi, 35.5), xytext=(xi, 33.8),
+                            arrowprops=dict(arrowstyle="->", color=col, lw=0.7))
+        fill_ok = (~cap).any() and ofc != "none"
+        handles.append(Line2D([], [], ls="none", marker=mk, ms=4, color=col, mfc=col if fill_ok else "none", label=lab))
     ax.axhline(30, color="grey", ls=":", lw=0.6)
     ax.set_xlabel(r"stability index $\nu$ (1 = linearly stable)")
-    ax.set_ylabel(f"operator $T_c$ [days], N = 10, {arc:.0f}-day arcs\n(35 = beyond 30 d)")
-    ax.set_ylim(0, 36)
-    ax.legend(ncol=3, loc="lower left")
+    ax.set_ylabel(f"operator $T_c$ [days], N = 10, {arc:.0f}-day arcs\n(arrow: capped, $\\geq$ 30 d)")
+    ax.set_ylim(0, 37)
+    handles.append(Line2D([], [], ls="none", marker=r"$\uparrow$", color="k", ms=6, label=r"$\geq$ 30 d (capped)"))
+    ax.legend(handles=handles, ncol=3, loc="lower left")
     ax.grid(True, which="both")
     fig.tight_layout()
     save(fig, "fig18_tc_vs_stability", ROOT)
