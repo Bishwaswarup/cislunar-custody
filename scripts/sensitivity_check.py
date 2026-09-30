@@ -25,7 +25,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from visibility_study import representative_orbits, EPOCH, STEP_MIN, TARGET  # noqa: E402
 from custody_study import DAYS, DT_DAYS, FOV_DEG, N_FIELDS, TEL, NET, EXCL, SIGMA  # noqa: E402
 from cislunar_custody.constants import MU_EM, TU_S, DAY_S  # noqa: E402
-from cislunar_custody.custody import predict_gap, custody_horizons, search_radius_deg  # noqa: E402
+from cislunar_custody.custody import predict_gap, custody_horizons, search_radius_deg, strip_horizon  # noqa: E402
 from cislunar_custody.frames import Ephemeris  # noqa: E402
 from cislunar_custody.observability import arc_information  # noqa: E402
 from cislunar_custody.sensors import SITES, NETWORKS, TELESCOPES, network_visibility  # noqa: E402
@@ -54,6 +54,9 @@ def pick(rows, per_orbit):
 
 
 def main(per_orbit, n_big):
+    if n_big == 300:
+        raise SystemExit("--samples is the LARGE sample size and must differ from the 300-sample baseline; "
+                         "for a quick look use e.g. --samples 600")
     t_start = time.time()
     rows = list(csv.DictReader(open(ROOT / "data" / "custody_cases.csv")))
     cases = pick(rows, per_orbit)
@@ -88,12 +91,25 @@ def main(per_orbit, n_big):
                               sigma_arcsec=SIGMA)[0]
         x_end = orb.states_at(t_tu[i_end])[0]
         row = {"orbit": oname, "scenario": c["scenario"], "arc_d": arc_d, "t_end_day": float(c["t_end_day"])}
+        strips = [(FOV_DEG, N) for N in N_FIELDS]
         for tag, n, seed in (("n300", 300, i_end), (f"n{n_big}", n_big, 10_000_000 + i_end)):
             pred = predict_gap(x_end, res.P_end, dt_tu, jd[i_end], MU_EM, n_samples=n,
-                               rng=np.random.default_rng(seed), batch=None if n == 300 else 250)
+                               rng=np.random.default_rng(seed), batch=None if n == 300 else 250,
+                               strips=strips if n == 300 else None)
             for N in N_FIELDS:
                 tc = custody_horizons(pred, search_radius_deg(FOV_DEG, N))["ideal"]
                 row[f"tc_{tag}_N{N}"] = tc * TU_S / DAY_S if np.isfinite(tc) else np.inf
+                if n == 300:
+                    ts = strip_horizon(pred, N)
+                    row[f"tc_strip_n300_N{N}"] = ts * TU_S / DAY_S if np.isfinite(ts) else np.inf
+        fine = np.concatenate([[0.0], np.geomspace(0.1, 30.0, 120)])
+        pf = predict_gap(x_end, res.P_end, fine * DAY_S / TU_S, jd[i_end], MU_EM, n_samples=300,
+                         rng=np.random.default_rng(i_end), strips=strips)
+        for N in N_FIELDS:
+            tc = custody_horizons(pf, search_radius_deg(FOV_DEG, N))["ideal"]
+            row[f"tc_fine_N{N}"] = tc * TU_S / DAY_S if np.isfinite(tc) else np.inf
+            ts = strip_horizon(pf, N)
+            row[f"tc_strip_fine_N{N}"] = ts * TU_S / DAY_S if np.isfinite(ts) else np.inf
         for N in N_FIELDS:
             row[f"tc_csv_N{N}"] = float(c[f"tc_ideal_N{N}"])
         out.append(row)
@@ -118,6 +134,15 @@ def main(per_orbit, n_big):
         print(f"  N={N:3d}: reproduces csv: {'yes' if rep else 'NO'};  |dT_c| median {np.median(d):.2f} d, "
               f"max {d.max():.2f} d;  relative median {100 * np.median(rel):.1f}%, max {100 * rel.max():.1f}%;  "
               f"finite/inf flips {int(np.sum(np.isfinite(a) != np.isfinite(b)))}")
+    print("\nGrid convergence (same 300 samples and seed, 37-point vs 121-point gap grid): |change| in T_c [d]")
+    for N in N_FIELDS:
+        for lab, k0, k1 in (("circle", "tc_n300", "tc_fine"), ("strip ", "tc_strip_n300", "tc_strip_fine")):
+            a = np.array([r[f"{k0}_N{N}"] for r in out])
+            b = np.array([r[f"{k1}_N{N}"] for r in out])
+            fin = np.isfinite(a) & np.isfinite(b)
+            d = np.abs(a[fin] - b[fin])
+            print(f"  N={N:3d} {lab}: median {np.median(d):.2f} d, max {d.max():.2f} d  "
+                  f"(n={fin.sum()}, finite/inf flips {int(np.sum(np.isfinite(a) != np.isfinite(b)))})")
     print(f"\ndone in {time.time() - t_start:.0f} s -> {path.name}")
 
 

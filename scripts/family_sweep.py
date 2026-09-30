@@ -75,15 +75,16 @@ def pick_members(name, n):
     return [(int(i), fam[i], info[i]) for i in idx]
 
 
-def main(n_members, step_days, arcs, n_samples, seed):
+def main(n_members, step_days, arcs, n_samples, seed, grid_points=120):
     t_start = time.time()
+    dt_days = np.concatenate([[0.0], np.geomspace(0.1, 30.0, grid_points)])
     jd0 = jd_from_iso(EPOCH)
     jd = jd_grid(jd0, DAYS, STEP_MIN)
     eph = Ephemeris(jd)
     t_tu = tu_from_jd(jd, jd0)
     spd = int(round(1440 / STEP_MIN))
     site_pos = {k: eph.site_eci(SITES[k])[0] for k in NETWORKS[NET]}
-    dt_tu = DT_DAYS * DAY_S / TU_S
+    dt_tu = dt_days * DAY_S / TU_S
     rng_phase = np.random.default_rng(seed)
     rows = []
     for fname in FAMILIES:
@@ -141,10 +142,10 @@ def main(n_members, step_days, arcs, n_samples, seed):
                         for k, v in vals.items():
                             row[f"tc_{k}_N{N}"] = v * TU_S / DAY_S if np.isfinite(v) else np.inf
                     # shape of the true cloud along/across the strip, where the 10-field circle loses custody
-                    t_ref = row["tc_ideal_N10"] if np.isfinite(row["tc_ideal_N10"]) else DT_DAYS[-1]
-                    row["strip_along99_deg"] = float(np.interp(t_ref, DT_DAYS, pred["strip_along99_deg"]))
-                    row["strip_cross99_arcsec"] = float(np.interp(t_ref, DT_DAYS, pred["strip_cross99_deg"]) * 3600)
-                    row["ut_axis_ratio"] = float(np.interp(t_ref, DT_DAYS, pred["ut_axis_ratio"]))
+                    t_ref = row["tc_ideal_N10"] if np.isfinite(row["tc_ideal_N10"]) else dt_days[-1]
+                    row["strip_along99_deg"] = float(np.interp(t_ref, dt_days, pred["strip_along99_deg"]))
+                    row["strip_cross99_arcsec"] = float(np.interp(t_ref, dt_days, pred["strip_cross99_deg"]) * 3600)
+                    row["ut_axis_ratio"] = float(np.interp(t_ref, dt_days, pred["ut_axis_ratio"]))
                     rows.append(row)
                     n_ok += 1
             print(f"  {fname:14s} #{idx:3d}  nu {info['stability']:8.1f}  T {info['period_d']:5.1f} d  "
@@ -315,6 +316,7 @@ if __name__ == "__main__":
     ap.add_argument("--arcs", type=float, nargs="+", default=[3.0, 7.0], help="tracking-arc lengths [d]")
     ap.add_argument("--samples", type=int, default=300)
     ap.add_argument("--seed", type=int, default=2027, help="seed of the random orbital phases")
+    ap.add_argument("--grid-points", type=int, default=120, help="gap lengths between 0.1 and 30 d")
     ap.add_argument("--plots-only", action="store_true")
     a = ap.parse_args()
     if a.plots_only:
@@ -322,4 +324,4 @@ if __name__ == "__main__":
         report(r_)
         plots(r_)
     else:
-        main(a.members, a.step_days, tuple(a.arcs), a.samples, a.seed)
+        main(a.members, a.step_days, tuple(a.arcs), a.samples, a.seed, a.grid_points)
