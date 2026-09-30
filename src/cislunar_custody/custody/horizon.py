@@ -59,14 +59,44 @@ def _mahalanobis2(p, C):
     return np.sum((p @ V) ** 2 / w, axis=1)
 
 
-def strip_pattern(fov_deg, n_fields, axis_ratio):
+MAX_STRIP_DEG = 10.0     # longest strip an observer would lay out along the predicted arc
+STRIP_TILT_DEG = 2.0     # tolerance on the strip orientation (UT axis vs true stretch direction)
+
+
+def strip_pattern(fov_deg, n_fields, axis_ratio, max_len_deg=MAX_STRIP_DEG):
     """Operational search pattern: n_fields square fields of side fov_deg laid out as a
     rectangle of n_l x n_w fields whose aspect follows the predicted sky ellipse
-    (axis_ratio = minor / major 1-sigma axis, <= 1). Uses at most n_fields fields.
-    Returns (full length, full width) in degrees."""
+    (axis_ratio = minor / major 1-sigma axis, <= 1), no longer than max_len_deg.
+    Uses at most n_fields fields. Returns (full length, full width) in degrees."""
     n_w = int(max(1, min(n_fields, round(np.sqrt(n_fields * max(axis_ratio, 0.0))))))
+    if max_len_deg is not None:
+        n_w = max(n_w, int(np.ceil(n_fields * fov_deg / max_len_deg - 1e-9)))
+    n_w = min(n_w, n_fields)
     n_l = max(1, n_fields // n_w)
     return n_l * fov_deg, n_w * fov_deg
+
+
+def strip_coordinates(umc, u, e_major):
+    """Spherical along-/cross-track angles [rad] of unit vectors umc about the great circle
+    through u in direction e_major (no gnomonic distortion; valid far from u)."""
+    n_gc = np.cross(u, e_major)
+    n_gc /= np.linalg.norm(n_gc)
+    along = np.arctan2(umc @ e_major, umc @ u)
+    cross = np.arcsin(np.clip(umc @ n_gc, -1.0, 1.0))
+    return along, cross
+
+
+def strip_containment(along, cross, L_deg, W_deg, tilt_deg=STRIP_TILT_DEG):
+    """Share of samples inside an L x W strip centred on the prediction, taking the WORST of
+    orientations -tilt, 0, +tilt (the strip axis is only known to within tilt_deg)."""
+    Lh, Wh = np.radians(L_deg) / 2, np.radians(W_deg) / 2
+    worst = 1.0
+    for th in ((0.0,) if not tilt_deg else (-tilt_deg, 0.0, tilt_deg)):
+        c, s_ = np.cos(np.radians(th)), np.sin(np.radians(th))
+        a = c * along + s_ * cross
+        b = -s_ * along + c * cross
+        worst = min(worst, float(np.mean((np.abs(a) <= Lh) & (np.abs(b) <= Wh))))
+    return worst
 
 
 def containment_horizon(t, frac, level=0.99):
@@ -86,7 +116,7 @@ def containment_horizon(t, frac, level=0.99):
 
 
 def predict_gap(x0, P0, dt_grid, jd0, mu, n_samples=500, rng=None, rtol=1e-9, atol=1e-11, batch=None,
-                strips=None):
+                strips=None, keep=None, strip_max_len_deg=MAX_STRIP_DEG, strip_tilt_deg=STRIP_TILT_DEG):
     """Propagate (x0, P0) over gap lengths dt_grid [TU] (starting with 0) from Julian
     date jd0. Returns a dict of arrays over dt_grid (angles in degrees).
     batch: integrate the Monte Carlo samples in chunks of this size. The samples share one
@@ -95,7 +125,13 @@ def predict_gap(x0, P0, dt_grid, jd0, mu, n_samples=500, rng=None, rtol=1e-9, at
     strips: optional list of (fov_deg, n_fields). For each, out[f"contain_strip_N{n}"] is the
     share of MC samples inside a strip_pattern centred on the UT-predicted direction and
     aligned with the UT sky ellipse (the operator's search); out["ut_axis_ratio"] is the
-    minor/major ratio of that ellipse. The other outputs do not depend on this option."""
+    minor/major ratio of that ellipse. Strips are at most strip_max_len_deg long, distances are
+    measured along and across the great circle of the ellipse's major axis, and containment is the
+    worst over orientation errors of +-strip_tilt_deg. out["strip_along99_deg"] and
+    out["strip_cross99_deg"] give the 99th percentile of |along| and |cross| of the true samples.
+    The other outputs do not depend on this option.
+    keep: optional collection of dt_grid indices; with strips, out["_debug"][k] stores the sky samples
+    and strip geometry at those times (diagnostics only; absent by default)."""
     rng = np.random.default_rng() if rng is None else rng
     dt_grid = np.asarray(dt_grid, float)
     M = len(dt_grid)
@@ -129,6 +165,10 @@ def predict_gap(x0, P0, dt_grid, jd0, mu, n_samples=500, rng=None, rtol=1e-9, at
         out[f"contain_strip_N{n}"] = np.zeros(M)
     if strips:
         out["ut_axis_ratio"] = np.zeros(M)
+        out["strip_along99_deg"] = np.zeros(M)
+        out["strip_cross99_deg"] = np.zeros(M)
+    if keep is not None:
+        out["_debug"] = {}
     for k in range(M):
         bk = tuple(b[k] for b in eph.basis)
         B = LU_KM * np.stack(bk, axis=-1)
@@ -148,13 +188,16 @@ def predict_gap(x0, P0, dt_grid, jd0, mu, n_samples=500, rng=None, rtol=1e-9, at
                 w2, V2 = np.linalg.eigh(0.5 * (C_sky + C_sky.T))
                 ratio = float(np.sqrt(max(w2[0], 0.0) / max(w2[1], 1e-300)))
                 out["ut_axis_ratio"][k] = ratio
-                cosu = umc @ u
-                q = (umc @ E.T) / np.where(cosu > 0, cosu, np.nan)[:, None]      # gnomonic [rad]
-                a, b = q @ V2[:, 1], q @ V2[:, 0]                                # major, minor axes
+                e_maj = V2[:, 1] @ E                                             # major axis, 3-D
+                a, b = strip_coordinates(umc, u, e_maj)                          # along, cross [rad]
+                out["strip_along99_deg"][k] = float(np.degrees(np.quantile(np.abs(a), 0.99)))
+                out["strip_cross99_deg"][k] = float(np.degrees(np.quantile(np.abs(b), 0.99)))
                 for fov, n in strips:
-                    L_deg, W_deg = strip_pattern(fov, n, ratio)
-                    inside = (np.abs(a) <= np.radians(L_deg) / 2) & (np.abs(b) <= np.radians(W_deg) / 2)
-                    out[f"contain_strip_N{n}"][k] = float(np.mean(np.where(cosu > 0, inside, False)))
+                    L_deg, W_deg = strip_pattern(fov, n, ratio, strip_max_len_deg)
+                    out[f"contain_strip_N{n}"][k] = strip_containment(a, b, L_deg, W_deg, strip_tilt_deg)
+                if keep is not None and k in keep:
+                    out["_debug"][k] = dict(umc=umc.copy(), u=u, E=E, V2=V2, w2=w2, ratio=ratio, C_sky=C_sky,
+                                            e_maj=e_maj, a=a, b=b)
     return out
 
 
