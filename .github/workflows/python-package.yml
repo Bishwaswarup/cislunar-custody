@@ -1,40 +1,56 @@
-# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
-
+# Runs the test suite (including the DE440 ephemeris tests) on every push and pull request.
 name: Python package
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "**" ]          # every branch, so a fix branch is tested before it is merged
   pull_request:
     branches: [ "main" ]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]   # pyproject: requires-python >= 3.10
 
     steps:
     - uses: actions/checkout@v4
+
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+        allow-prereleases: true
+        cache: pip
+
+    - name: Install the package with test and ephemeris extras
       run: |
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        python -m pip install flake8
+        python -m pip install -e ".[dev,ephem]"
+
+    # data/de440s.bsp (32 MB) is not in git; download it once and cache it between runs
+    - name: Cache DE440 kernel
+      id: kernel
+      uses: actions/cache@v4
+      with:
+        path: data/de440s.bsp
+        key: de440s-bsp-v1
+    - name: Download DE440 kernel
+      if: steps.kernel.outputs.cache-hit != 'true'
+      run: |
+        curl -fsSL --retry 3 -o data/de440s.bsp \
+          https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp
+
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        # everything else is reported as a warning only
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
     - name: Test with pytest
       run: |
-        pytest
+        pytest -q -rs            # -rs lists any skipped test and the reason
