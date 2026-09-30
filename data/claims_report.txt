@@ -101,32 +101,32 @@ R8                 PASS    Sec 6              L1 prior cloud 1-99% span [10^3 km
 K0                 PASS    Sec 4              number of custody cases  |  525 -> 525
 K0b                PASS    Sec 4              number of distinct arcs among the custody cases  |  394 -> 394
 K1.L1.1.s0         PASS    Table 3            L1 1-d median sigma0 [km]  |  20.0 -> 19.95
-K1.L1.1.N1         PASS    Table 3            L1 1-d T_c(N=1) median (p10-p90)  |  8.8 (5.5-10.0) -> 8.8 (5.5-10.0)   [n=23]
-K1.L1.1.N10        PASS    Table 3            L1 1-d T_c(N=10) median (p10-p90)  |  10.9 (7.3-11.6) -> 10.9 (7.3-11.6)   [n=23]
-K1.L1.1.N100       PASS    Table 3            L1 1-d T_c(N=100) median (p10-p90)  |  13.1 (9.6-13.7) -> 13.1 (9.6-13.7)   [n=23]
+K1.L1.1.N1         PASS    Table 3            L1 1-d T_c(N=1) median (p10-p90)  |  8.8 (5.5-9.9) -> 8.8 (5.5-9.9)   [n=23]
+K1.L1.1.N10        PASS    Table 3            L1 1-d T_c(N=10) median (p10-p90)  |  11.0 (7.4-12.4) -> 11.0 (7.4-12.4)   [n=23]
+K1.L1.1.N100       PASS    Table 3            L1 1-d T_c(N=100) median (p10-p90)  |  12.8 (9.5-13.8) -> 12.8 (9.5-13.8)   [n=23]
 K1.L1.3.s0         PASS    Table 3            L1 3-d median sigma0 [km]  |  5.1 -> 5.115
 K1.L1.3.N1         PASS    Table 3            L1 3-d T_c(N=1) median (p10-p90)  |  11.7 (8.0-12.4) -> 11.7 (8.0-12.4)   [n=22]
-K1.L1.3.N10        PASS    Table 3            L1 3-d T_c(N=10) median (p10-p90)  |  13.2 (10.2-14.3) -> 13.2 (10.2-14.3)   [n=22]
-K1.L1.3.N100       PASS    Table 3            L1 3-d T_c(N=100) median (p10-p90)  |  15.1 (13.4-17.0) -> 15.1 (13.4-17.0)   [n=22]
+K1.L1.3.N10        PASS    Table 3            L1 3-d T_c(N=10) median (p10-p90)  |  13.2 (10.1-14.1) -> 13.2 (10.1-14.1)   [n=22]
+K1.L1.3.N100       PASS    Table 3            L1 3-d T_c(N=100) median (p10-p90)  |  14.9 (13.5-17.4) -> 14.9 (13.5-17.4)   [n=22]
 K1.L1.7.s0         PASS    Table 3            L1 7-d median sigma0 [km]  |  0.7 -> 0.7252
-K1.L1.7.N1         PASS    Table 3            L1 7-d T_c(N=1) median (p10-p90)  |  14.4 (13.1-15.2) -> 14.4 (13.1-15.2)   [n=22]
-K1.L1.7.N10        PASS    Table 3            L1 7-d T_c(N=10) median (p10-p90)  |  16.5 (14.6-18.4) -> 16.5 (14.6-18.4)   [n=22]
-K1.L1.7.N100       PASS    Table 3            L1 7-d T_c(N=100) median (p10-p90)  |  18.4 (16.6-19.7) -> 18.4 (16.6-19.7)   [n=22]
+K1.L1.7.N1         PASS    Table 3            L1 7-d T_c(N=1) median (p10-p90)  |  14.3 (13.1-15.3) -> 14.3 (13.1-15.3)   [n=22]
+K1.L1.7.N10        PASS    Table 3            L1 7-d T_c(N=10) median (p10-p90)  |  16.5 (14.7-18.4) -> 16.5 (14.7-18.4)   [n=22]
+K1.L1.7.N100       PASS    Table 3            L1 7-d T_c(N=100) median (p10-p90)  |  18.5 (16.3-20.0) -> 18.5 (16.3-20.0)   [n=22]
 K1.L2.1.s0         PASS    Table 3            L2 1-d median sigma0 [km]  |  30.2 -> 30.2
 K1.L2.1.N1         PASS    Table 3            L2 1-d T_c(N=1) median (p10-p90)  |  9.5 (7.7-11.2) -> 9.5 (7.7-11.2)   [n=23]
-K1.L2.1.N10        PASS    Table 3            L2 1-d T_c(N=10) median (p10-p90)  |  12.4 (9.9-15.3) -> 12.4 (9.9-15.3)   [n=23]
-K1.L2.1.N100       PASS    Table 3            L2 1-d T_c(N=100) median (p10-p90)  |  16.0 (13.1-18.4) -> 16.0 (13.1-18.4)   [n=23]
+K1.L2.1.N10        PASS    Table 3            L2 1-d T_c(N=10) median (p10-p90)  |  12.5 (9.9-15.3) -> 12.5 (9.9-15.3)   [n=23]
+K1.L2.1.N100       PASS    Table 3            L2 1-d T_c(N=100) median (p10-p90)  |  16.2 (12.9-18.2) -> 16.2 (12.9-18.2)   [n=23]
 K1.L2.3.s0         PASS    Table 3            L2 3-d median sigma0 [km]  |  15.5 -> 15.46
-K1.L2.3.N1         PASS    Table 3            L2 3-d T_c(N=1) median (p10-p90)  |  10.5 (9.1-13.4) -> 10.5 (9.1-13.4)   [n=23]
-K1.L2.3.N10        PASS    Table 3            L2 3-d T_c(N=10) median (p10-p90)  |  14.9 (11.2-16.3) -> 14.9 (11.2-16.3)   [n=23]
+K1.L2.3.N1         PASS    Table 3            L2 3-d T_c(N=1) median (p10-p90)  |  10.3 (9.1-13.4) -> 10.3 (9.1-13.4)   [n=23]
+K1.L2.3.N10        PASS    Table 3            L2 3-d T_c(N=10) median (p10-p90)  |  14.9 (11.2-16.5) -> 14.9 (11.2-16.5)   [n=23]
 K1.L2.3.N100       PASS    Table 3            L2 3-d T_c(N=100) median (p10-p90)  |  18.3 (15.6-19.0) -> 18.3 (15.6-19.0)   [n=23]
 K1.L2.7.s0         PASS    Table 3            L2 7-d median sigma0 [km]  |  7.0 -> 7.009
-K1.L2.7.N1         PASS    Table 3            L2 7-d T_c(N=1) median (p10-p90)  |  13.8 (12.3-15.7) -> 13.8 (12.3-15.7)   [n=22]
-K1.L2.7.N10        PASS    Table 3            L2 7-d T_c(N=10) median (p10-p90)  |  16.7 (15.5-18.4) -> 16.7 (15.5-18.4)   [n=22]
-K1.L2.7.N100       PASS    Table 3            L2 7-d T_c(N=100) median (p10-p90)  |  19.2 (18.3-21.3) -> 19.2 (18.3-21.3)   [n=22]
+K1.L2.7.N1         PASS    Table 3            L2 7-d T_c(N=1) median (p10-p90)  |  13.9 (11.9-15.8) -> 13.9 (11.9-15.8)   [n=22]
+K1.L2.7.N10        PASS    Table 3            L2 7-d T_c(N=10) median (p10-p90)  |  17.4 (15.5-18.3) -> 17.4 (15.5-18.3)   [n=22]
+K1.L2.7.N100       PASS    Table 3            L2 7-d T_c(N=100) median (p10-p90)  |  19.2 (18.4-21.4) -> 19.2 (18.4-21.4)   [n=22]
 K1.NRHO.1.s0       PASS    Table 3            NRHO 1-d median sigma0 [km]  |  23.8 -> 23.75
-K1.NRHO.1.N1       PASS    Table 3            NRHO 1-d T_c(N=1) median (p10-p90)  |  >30 (17.2->30) -> >30 (17.2->30)   [n=21]
-K1.NRHO.1.N10      PASS    Table 3            NRHO 1-d T_c(N=10) median (p10-p90)  |  >30 (18.2->30) -> >30 (18.2->30)   [n=21]
+K1.NRHO.1.N1       PASS    Table 3            NRHO 1-d T_c(N=1) median (p10-p90)  |  >30 (5.3->30) -> >30 (5.3->30)   [n=21]
+K1.NRHO.1.N10      PASS    Table 3            NRHO 1-d T_c(N=10) median (p10-p90)  |  >30 (18.4->30) -> >30 (18.4->30)   [n=21]
 K1.NRHO.1.N100     PASS    Table 3            NRHO 1-d T_c(N=100) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=21]
 K1.NRHO.3.s0       PASS    Table 3            NRHO 3-d median sigma0 [km]  |  3.9 -> 3.886
 K1.NRHO.3.N1       PASS    Table 3            NRHO 3-d T_c(N=1) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=23]
@@ -149,16 +149,16 @@ K1.DRO.7.N1        PASS    Table 3            DRO 7-d T_c(N=1) median (p10-p90) 
 K1.DRO.7.N10       PASS    Table 3            DRO 7-d T_c(N=10) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=23]
 K1.DRO.7.N100      PASS    Table 3            DRO 7-d T_c(N=100) median (p10-p90)  |  >30 (>30->30) -> >30 (>30->30)   [n=23]
 K2                 PASS    Sec 7              NRHO & DRO median 99% sky radius < 0.01 deg at 30 d (7-d arcs)  |  True -> 0.0071 deg
-K3                 PASS    Sec 8              minimum median UT containment, L1 & L2 (7-d arcs) [%]  |  (68, 70) -> 67.67-69.5
-K3b                PASS    Sec 8              gap at which median UT containment first drops below 95% [d]  |  (18, 22) -> 18.4-21.66
-K13a               PASS    Sec 8 / abstract   L1: gap where median linear containment first < 95% [d]  |  9.6 -> 9.587
-K13b               PASS    Sec 8              L2: gap where median linear containment first < 95% [d]  |  18.4 -> 18.4
-K4                 PASS    Sec 8              L1 linear 99% ellipse containment at 14 d, median over all L1 arcs [%]  |  7.6 -> 7.602
-K5                 PASS    Sec 8              L1 UT containment at 14 d, median over all L1 arcs [%]  |  98 -> 98.03
-K6                 PASS    Sec 7              gain from 10 -> 100 fields, unstable orbits [d]  |  (1.8, 3.6) -> 1.839-3.567
-K7                 PASS    Sec 7              7-d arcs: median T_c for N=1..100, unstable [d]  |  (13.8, 19.2) -> 13.8-19.24
-K8                 PASS    abstract / Sec 10  median T_c(N=10), unstable orbits, all arcs [d]  |  (10.9, 16.7) -> 10.9-16.7
-K9.NRHO.1          PASS    Table 4            NRHO 1-d blackouts: n, median length, survived N=1/10/100/UT  |  9 / 10.5 / 78 / 78 / 78 / 78 -> 9 / 10.5 / 77.8 / 77.8 / 77.8 / 77.8   [N=10 survival 95% CI 45-94%]
+K3                 PASS    Sec 8              minimum median UT containment, L1 & L2 (7-d arcs) [%]  |  (66, 72) -> 66.33-72.17
+K3b                PASS    Sec 8              gap at which median UT containment first drops below 95% [d]  |  (18.6, 19.5) -> 18.58-19.49
+K13a               PASS    Sec 8 / abstract   L1: gap where median linear containment first < 95% [d]  |  9.5 -> 9.496
+K13b               PASS    Sec 8              L2: gap where median linear containment first < 95% [d]  |  18.6 -> 18.58
+K4                 PASS    Sec 8              L1 linear 99% ellipse containment at 14 d, median over all L1 arcs [%]  |  5.4 -> 5.375
+K5                 PASS    Sec 8              L1 UT containment at 14 d, median over all L1 arcs [%]  |  98 -> 98.43
+K6                 PASS    Sec 7              gain from 10 -> 100 fields, unstable orbits [d]  |  (1.7, 3.6) -> 1.704-3.642
+K7                 PASS    Sec 7              7-d arcs: median T_c for N=1..100, unstable [d]  |  (13.9, 19.2) -> 13.89-19.19
+K8                 PASS    abstract / Sec 10  median T_c(N=10), unstable orbits, all arcs [d]  |  (11.0, 17.4) -> 10.96-17.4
+K9.NRHO.1          PASS    Table 4            NRHO 1-d blackouts: n, median length, survived N=1/10/100/UT  |  9 / 10.5 / 67 / 78 / 78 / 78 -> 9 / 10.5 / 66.7 / 77.8 / 77.8 / 77.8   [N=10 survival 95% CI 45-94%]
 K9.NRHO.3          PASS    Table 4            NRHO 3-d blackouts: n, median length, survived N=1/10/100/UT  |  11 / 10.5 / 100 / 100 / 100 / 100 -> 11 / 10.5 / 100 / 100 / 100 / 100   [N=10 survival 95% CI 74-100%]
 K9.NRHO.7          PASS    Table 4            NRHO 7-d blackouts: n, median length, survived N=1/10/100/UT  |  11 / 10.5 / 100 / 100 / 100 / 100 -> 11 / 10.5 / 100 / 100 / 100 / 100   [N=10 survival 95% CI 74-100%]
 K9.L1.1            PASS    Table 4            L1 1-d blackouts: n, median length, survived N=1/10/100/UT  |  27 / 3.1 / 67 / 89 / 93 / 89 -> 27 / 3.08 / 66.7 / 88.9 / 92.6 / 88.9   [N=10 survival 95% CI 72-96%]
@@ -167,48 +167,55 @@ K9.L1.7            PASS    Table 4            L1 7-d blackouts: n, median length
 K9.L2.1            PASS    Table 4            L2 1-d blackouts: n, median length, survived N=1/10/100/UT  |  34 / 4.1 / 65 / 74 / 94 / 74 -> 34 / 4.13 / 64.7 / 73.5 / 94.1 / 73.5   [N=10 survival 95% CI 57-85%]
 K9.L2.3            PASS    Table 4            L2 3-d blackouts: n, median length, survived N=1/10/100/UT  |  34 / 4.1 / 79 / 97 / 97 / 97 -> 34 / 4.13 / 79.4 / 97.1 / 97.1 / 97.1   [N=10 survival 95% CI 85-99%]
 K9.L2.7            PASS    Table 4            L2 7-d blackouts: n, median length, survived N=1/10/100/UT  |  34 / 4.1 / 91 / 100 / 100 / 100 -> 34 / 4.13 / 91.2 / 100 / 100 / 100   [N=10 survival 95% CI 90-100%]
-K9.DRO.1           PASS    Table 4            DRO 1-d blackouts: n, median length, survived N=1/10/100/UT  |  13 / 11.3 / 54 / 85 / 85 / 85 -> 13 / 11.3 / 53.8 / 84.6 / 84.6 / 84.6   [N=10 survival 95% CI 58-96%]
+K9.DRO.1           PASS    Table 4            DRO 1-d blackouts: n, median length, survived N=1/10/100/UT  |  13 / 11.3 / 46 / 85 / 85 / 85 -> 13 / 11.3 / 46.2 / 84.6 / 84.6 / 84.6   [N=10 survival 95% CI 58-96%]
 K9.DRO.3           PASS    Table 4            DRO 3-d blackouts: n, median length, survived N=1/10/100/UT  |  13 / 11.3 / 100 / 100 / 100 / 100 -> 13 / 11.3 / 100 / 100 / 100 / 100   [N=10 survival 95% CI 77-100%]
 K9.DRO.7           PASS    Table 4            DRO 7-d blackouts: n, median length, survived N=1/10/100/UT  |  13 / 11.3 / 100 / 100 / 100 / 100 -> 13 / 11.3 / 100 / 100 / 100 / 100   [N=10 survival 95% CI 77-100%]
 K10.1              PASS    abstract           blackouts survived (N=10) after 1-d arcs, all orbits [%]  |  (74, 89) -> 73.53-88.89
 K10.3              PASS    abstract           blackouts survived (N=10) after 3-d arcs, all orbits [%]  |  (96, 100) -> 96.3-100
 K10.7              PASS    abstract           blackouts survived (N=10) after 7-d arcs, all orbits [%]  |  (100, 100) -> 100-100
-K12                PASS    info               linear false-custody share at N=10 (not in paper)  |  - -> 1.6% of 254 cases   [information only]
-K11                PASS    Sec 8              UT never gives false custody at N=10 (claim > 1.1 x actual)  |  True -> 0.0% of 254 cases
-P1.ut_claim.N1     PASS    Sec 8 / abstract   log-R2 of ut_claim predictor, N=1  |  0.97 -> 0.9694   [n=268; CI 0.90-1.00]
-P1.lin_claim.N1    PASS    Sec 8 / abstract   log-R2 of lin_claim predictor, N=1  |  0.97 -> 0.9691   [n=268; CI 0.90-1.00]
-P1.ut_claim.N10    PASS    Sec 8 / abstract   log-R2 of ut_claim predictor, N=10  |  1.0 -> 0.9963   [n=254; CI 0.99-1.00]
-P1.lin_claim.N10   WEAK    Sec 8 / abstract   log-R2 of lin_claim predictor, N=10  |  0.93 -> 0.9264   [n=254; bootstrap 95% CI 0.81-0.99]
-P1.ut_claim.N100   WEAK    Sec 8 / abstract   log-R2 of ut_claim predictor, N=100  |  0.9 -> 0.8971   [n=253; bootstrap 95% CI 0.74-0.98]
-P1.lin_claim.N100  PASS    Sec 8 / abstract   log-R2 of lin_claim predictor, N=100  |  0.95 -> 0.9508   [n=253; CI 0.91-0.97]
-P2                 PASS    Sec 8              log-R2 of orbit-only FTLE predictor, N=1..100  |  (-0.24, 0.04) -> -0.2425-0.04427
-P3                 PASS    Sec 8              number of distinct arcs used for the R2 values  |  (250, 268) -> 250-268
+K12                PASS    info               linear false-custody share at N=10 (not in paper)  |  - -> 2.4% of 255 cases   [information only]
+K11                PASS    Sec 8              distinct arcs with UT false custody at N=10 (claim > 1.1 x actual)  |  2 -> 2   [0.8% of 254 arcs]
+K11b               PASS    Sec 8              distinct arcs with a finite UT-centred horizon at N=10  |  254 -> 254
+P1.ut_claim.N1     WEAK    Sec 8 / abstract   log-R2 of ut_claim predictor, N=1  |  0.96 -> 0.9574   [n=269; bootstrap 95% CI 0.87-1.00]
+P1.lin_claim.N1    WEAK    Sec 8 / abstract   log-R2 of lin_claim predictor, N=1  |  0.96 -> 0.9572   [n=269; bootstrap 95% CI 0.87-1.00]
+P1.ut_claim.N10    PASS    Sec 8 / abstract   log-R2 of ut_claim predictor, N=10  |  1.0 -> 0.9958   [n=253; CI 0.99-1.00]
+P1.lin_claim.N10   PASS    Sec 8 / abstract   log-R2 of lin_claim predictor, N=10  |  0.99 -> 0.9937   [n=253; CI 0.99-1.00]
+P1.ut_claim.N100   WEAK    Sec 8 / abstract   log-R2 of ut_claim predictor, N=100  |  0.93 -> 0.9312   [n=253; bootstrap 95% CI 0.85-0.98]
+P1.lin_claim.N100  PASS    Sec 8 / abstract   log-R2 of lin_claim predictor, N=100  |  0.97 -> 0.9682   [n=253; CI 0.95-0.98]
+P2                 PASS    Sec 8              log-R2 of orbit-only FTLE predictor, N=1..100  |  (-0.23, 0.04) -> -0.2348-0.04398
+P3                 PASS    Sec 8              number of distinct arcs used for the R2 values  |  (251, 269) -> 251-269
 E1                 PASS    Sec 9              L1/L2/DRO counterparts continuous to < 0.4 m  |  True -> max 0.366 m
 E2                 PASS    Sec 9              median deviation from CR3BP shape, L1/L2/DRO [km]  |  (3500, 5200) -> 3558-5209
 E3                 PASS    Sec 9              NRHO continuity residual median-max [km]  |  (50, 124) -> 49.79-123.5
 E4                 PASS    Sec 9              number of ephemeris cases  |  60 -> 60
-E5.NRHO.1          PASS    Table 5            NRHO 1-d: n, T_c CR3BP, T_c ephem, ratio  |  8 / >30 / >30 / 0.98 -> 8 / >30 / >30 / 0.98
+E5.NRHO.1          PASS    Table 5            NRHO 1-d: n, T_c CR3BP, T_c ephem, ratio  |  8 / >30 / 28.3 / 0.98 -> 8 / >30 / 28.3 / 0.98
 E5.NRHO.7          PASS    Table 5            NRHO 7-d: n, T_c CR3BP, T_c ephem, ratio  |  7 / >30 / >30 / None -> 7 / >30 / >30 / -
 E5.L1.1            WEAK    Table 5            L1 1-d: n, T_c CR3BP, T_c ephem, ratio  |  4 / 8.5 / 7.8 / 0.93 -> 4 / 8.5 / 7.8 / 0.93   [only n=4 cases]
-E5.L1.7            PASS    Table 5            L1 7-d: n, T_c CR3BP, T_c ephem, ratio  |  11 / 16.0 / 15.9 / 1.01 -> 11 / 16.0 / 15.9 / 1.01
-E5.L2.1            PASS    Table 5            L2 1-d: n, T_c CR3BP, T_c ephem, ratio  |  6 / 12.4 / 11.3 / 0.95 -> 6 / 12.4 / 11.3 / 0.95
-E5.L2.7            PASS    Table 5            L2 7-d: n, T_c CR3BP, T_c ephem, ratio  |  9 / 15.9 / 16.4 / 0.99 -> 9 / 15.9 / 16.4 / 0.99
-E5.DRO.1           PASS    Table 5            DRO 1-d: n, T_c CR3BP, T_c ephem, ratio  |  6 / >30 / >30 / 1.0 -> 6 / >30 / >30 / 1.00
+E5.L1.7            PASS    Table 5            L1 7-d: n, T_c CR3BP, T_c ephem, ratio  |  11 / 15.9 / 15.9 / 1.01 -> 11 / 15.9 / 15.9 / 1.01
+E5.L2.1            PASS    Table 5            L2 1-d: n, T_c CR3BP, T_c ephem, ratio  |  6 / 12.5 / 11.3 / 0.94 -> 6 / 12.5 / 11.3 / 0.94
+E5.L2.7            PASS    Table 5            L2 7-d: n, T_c CR3BP, T_c ephem, ratio  |  9 / 15.9 / 16.3 / 0.99 -> 9 / 15.9 / 16.3 / 0.99
+E5.DRO.1           PASS    Table 5            DRO 1-d: n, T_c CR3BP, T_c ephem, ratio  |  6 / >30 / >30 / 0.99 -> 6 / >30 / >30 / 0.99
 E5.DRO.7           PASS    Table 5            DRO 7-d: n, T_c CR3BP, T_c ephem, ratio  |  9 / >30 / >30 / None -> 9 / >30 / >30 / -
-E6                 PASS    abstract / Sec 9   range of median ephemeris/CR3BP T_c ratios  |  (0.93, 1.01) -> 0.9328-1.009
+E6                 PASS    abstract / Sec 9   range of median ephemeris/CR3BP T_c ratios  |  (0.93, 1.01) -> 0.9321-1.005
 E4b                PASS    Sec 9              distinct arcs among the ephemeris cases  |  59 -> 59
-E7                 PASS    Sec 9              distinct arcs whose T_c(N=10) changes by > 3 d (or crosses 30 d)  |  5 -> 5
+E7                 PASS    Sec 9              distinct arcs whose T_c(N=10) changes by > 3 d (or crosses 30 d)  |  6 -> 6
 E8                 PASS    Sec 9              blackout groups whose survival count differs CR3BP vs ephemeris  |  2 -> 2   [L1 1d: 2/4 -> 1/4; L2 7d: 4/4 -> 3/4]
-E9.N1              PASS    Sec 9              ephemeris UT log-R2, N=1  |  1.0 -> 0.9979
-E9.N10             PASS    Sec 9              ephemeris UT log-R2, N=10  |  1.0 -> 0.9992
-E9.N100            WEAK    Sec 9              ephemeris UT log-R2, N=100  |  0.68 -> 0.6824   [n=28; bootstrap 95% CI 0.25-0.99]
-E10.L1.contain_lin_ephem_14d PASS    Sec 9              L1 contain_lin_ephem_14d median [%]  |  15.5 -> 15.5
-E10.L2.contain_lin_ephem_14d PASS    Sec 9              L2 contain_lin_ephem_14d median [%]  |  70.8 -> 70.78
-E10.L2.contain_lin_cr3bp_14d PASS    Sec 9              L2 contain_lin_cr3bp_14d median [%]  |  98.9 -> 98.87
-E11                PASS    Sec 9              ephemeris UT containment at 14 d, all orbits [%]  |  (97, 99) -> 97.33-99
-S1                 PASS    Sec 10 limitations T_c converged in Monte Carlo sample size (300 vs larger sample)  |  None -> n2000 samples, 17 cases   [N=1: median |dT_c| 0.11 d (2.1%), max 0.62 d; N=10: median |dT_c| 0.13 d (1.2%), max 0.44 d; N=100: median |dT_c| 0.16 d (1.2%), max 11.50 d]
+E9.N1              WEAK    Sec 9              ephemeris UT log-R2, N=1  |  0.9 -> 0.9004   [n=42; bootstrap 95% CI 0.59-1.00]
+E9.N10             PASS    Sec 9              ephemeris UT log-R2, N=10  |  1.0 -> 0.9991
+E9.N100            WEAK    Sec 9              ephemeris UT log-R2, N=100  |  0.8 -> 0.7995   [n=30; bootstrap 95% CI 0.55-0.99]
+E10.L1.contain_lin_ephem_14d PASS    Sec 9              L1 contain_lin_ephem_14d median [%]  |  12.6 -> 12.64
+E10.L1.contain_lin_cr3bp_14d PASS    Sec 9              L1 contain_lin_cr3bp_14d median [%]  |  10.3 -> 10.28
+E10.L2.contain_lin_ephem_14d PASS    Sec 9              L2 contain_lin_ephem_14d median [%]  |  84.8 -> 84.79
+E10.L2.contain_lin_cr3bp_14d PASS    Sec 9              L2 contain_lin_cr3bp_14d median [%]  |  98.6 -> 98.63
+E11                PASS    Sec 9              ephemeris UT containment at 14 d, all orbits [%]  |  (98, 99) -> 97.63-99
+S1                 PASS    Sec 10 limitations T_c converged in Monte Carlo sample size (300 vs larger sample)  |  None -> n2000 samples, 17 cases   [N=1: median |dT_c| 0.11 d (1.9%), max 12.31 d; N=10: median |dT_c| 0.14 d (1.1%), max 0.89 d; N=100: median |dT_c| 0.09 d (0.7%), max 0.87 d]
 S2                 PASS    Sec 10             arcs in the sample-size check  |  17 -> 17
-S3                 PASS    Sec 10             median |dT_c| 300 vs 2000 samples, N=1..100 [d]  |  (0.1, 0.2) -> 0.1145-0.1649
-S4                 PASS    Sec 10             max |dT_c| for N<=10 [d]  |  0.6 -> 0.6155
+S3                 PASS    Sec 10             median |dT_c| 300 vs 2000 samples, N=1..100 [d]  |  (0.09, 0.14) -> 0.0853-0.1356
+S4                 PASS    Sec 10             max |dT_c| for N=10 and 100 [d]  |  0.9 -> 0.892
+S5                 PASS    Sec 10             N=1 worst case: T_c with 300 and 2000 samples [d]  |  (5.3, 17.6) -> 5.303-17.61   [NRHO 9:2 phase 1-d arc]
+S6                 PASS    Sec 10             N=1 worst case is an NRHO arc whose 300-sample horizon ends at perilune (< 0.1 d)  |  True -> NRHO 9:2, 0.060 d from perilune
+G1                 PASS    Sec 4              grid check: max median |dT_c|, 121-point vs uniform 0.02-d grid [d]  |  0.02 -> 0.02169
+G2                 PASS    Sec 4              grid check: max |dT_c| over all N, 121-point vs uniform grid [d]  |  0.6 -> 0.6004
+G3                 PASS    Sec 4              grid check: max |dT_c| for N=1 and 10 [d]  |  0.15 -> 0.1467
 --------------------------------------------------------------------------------------------------------------
-summary: WEAK 4, PASS 206
+summary: WEAK 6, PASS 211
