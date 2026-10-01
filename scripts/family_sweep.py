@@ -14,6 +14,8 @@ orbital phase at the epoch, so that T_c can be related to the orbit's stability 
     python scripts/family_sweep.py --plots-only             # redraw figures from data/family_sweep.csv
 Reference sensors as in custody_study.py (1 m, Tri-3+S, 5 deg exclusion, 1 arcsec).
 Outputs: data/family_sweep.csv, figures/fig18_tc_vs_stability.png, figures/fig19_operator_vs_ideal.png
+(paper: Fig14 and Fig15 in figures/jas/). fig18 shows the operator UT-centred circle, the paper's headline
+horizon; the strip is reported as a secondary result (it relies on the very thin CRLB cloud).
 """
 import argparse
 import csv
@@ -218,10 +220,17 @@ def report(rows):
             fams[r["family"]] = fams.get(r["family"], 0) + 1
         print("  gaining cases by family: " + ", ".join(f"{k} {v}" for k, v in fams.items()))
 
-    print("\nDoes the stability index organise the horizon? Rank correlation of member median T_c "
-          "(strip, N=10) with log10(nu), members with nu > 1.01")
+    print("\nOperator vs ideal, largest difference per case (horizons capped at 30 d)")
+    for N in N_FIELDS:
+        a = np.minimum([r[f"tc_ideal_N{N}"] for r in rows], 30.0)
+        b = np.minimum([r[f"tc_utc_N{N}"] for r in rows], 30.0)
+        d = np.abs(b - a)
+        print(f"  N={N:3d} (n={len(rows)}): max |UT circle - ideal| {d.max():.2f} d, cases > 0.5 d: {(d > 0.5).sum()}")
 
-    def _corr(label, m, key="strip"):
+    print("\nDoes the stability index organise the horizon? Rank correlation of member median T_c (N=10) "
+          "with log10(nu), members with nu > 1.01; horizons beyond 30 d enter tied at 30 d")
+
+    def _corr(label, m, key):
         m = [x for x in m if np.isfinite(x[key])]
         if len(m) < 4:
             print(f"    {label:28s} too few members ({len(m)})")
@@ -232,17 +241,16 @@ def report(rows):
         tau, pt = kendalltau(lx, y)
         print(f"    {label:28s} rho = {rho:5.2f} (p = {p:.2g}), tau = {tau:5.2f} (p = {pt:.2g}), n = {len(m)}")
 
-    for arc in arcs:
-        m = [x for x in member_table(rows, arc) if x["stability"] > 1.01 and np.isfinite(x["strip"])]
-        ncap = sum(x["strip"] >= 30 for x in m)
-        print(f"  {arc:.0f}-day arcs: {ncap} of {len(m)} members capped at 30 d (strip)")
-        _corr("all members", m)
-        _corr("nu > 10 only", [x for x in m if x["stability"] > 10])
-        for fam in FAMILIES:
-            _corr(f"family {fam}", [x for x in m if x["family"] == fam])
-        print("    UT-centred circle horizon:")
-        _corr("all members", m, "utc")
-        _corr("nu > 10 only", [x for x in m if x["stability"] > 10], "utc")
+    for key, lab in (("utc", "operator UT-centred circle (primary)"), ("strip", "UT-centred strip (secondary)")):
+        print(f"  {lab}:")
+        for arc in arcs:
+            m = [x for x in member_table(rows, arc) if x["stability"] > 1.01 and np.isfinite(x[key])]
+            ncap = sum(x[key] >= 30 for x in m)
+            print(f"  {arc:.0f}-day arcs: {ncap} of {len(m)} members capped at 30 d")
+            _corr("all members", m, key)
+            _corr("nu > 10 only", [x for x in m if x["stability"] > 10], key)
+            for fam in FAMILIES:
+                _corr(f"family {fam}", [x for x in m if x["family"] == fam], key)
 
 
 def plots(rows):
@@ -257,11 +265,11 @@ def plots(rows):
         x = np.array([m["stability"] for m in mt])
         for m in mt:
             sel = [r for r in rows if r["family"] == fam and r["member"] == m["member"] and r["arc_d"] == arc]
-            v = np.minimum([r["tc_strip_N10"] for r in sel], 35.0)
+            v = np.minimum([r["tc_utc_N10"] for r in sel], 35.0)
             lo, hi = np.percentile(v, [10, 90])
             ax.plot([m["stability"]] * 2, [lo, hi], color=col, lw=0.6, alpha=0.7)
-        y = np.array([m["strip"] for m in mt])
-        cap = np.array([m["strip"] >= 30 for m in mt])
+        y = np.array([m["utc"] for m in mt])
+        cap = np.array([m["utc"] >= 30 for m in mt])
         ofc = "none" if fam in ("L1_lyapunov", "L2_lyapunov") else col
         ax.semilogx(x[~cap], y[~cap], ls="none", marker=mk, ms=4, color=col, mfc=ofc)
         if cap.any():
@@ -273,7 +281,7 @@ def plots(rows):
         handles.append(Line2D([], [], ls="none", marker=mk, ms=4, color=col, mfc=col if fill_ok else "none", label=lab))
     ax.axhline(30, color="grey", ls=":", lw=0.6)
     ax.set_xlabel(r"stability index $\nu$ (1 = linearly stable)")
-    ax.set_ylabel(f"operator $T_c$ [days], N = 10, {arc:.0f}-day arcs\n(arrow: capped, $\\geq$ 30 d)")
+    ax.set_ylabel(f"operator $T_c$ [days], N = 10, {arc:.0f}-day arcs\n(UT-centred circle; arrow: $\\geq$ 30 d)")
     ax.set_ylim(0, 37)
     handles.append(Line2D([], [], ls="none", marker=r"$\uparrow$", color="k", ms=6, label=r"$\geq$ 30 d (capped)"))
     ax.legend(handles=handles, ncol=3, loc="lower left")

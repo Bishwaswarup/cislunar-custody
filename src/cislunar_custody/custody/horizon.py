@@ -116,7 +116,8 @@ def containment_horizon(t, frac, level=0.99):
 
 
 def predict_gap(x0, P0, dt_grid, jd0, mu, n_samples=500, rng=None, rtol=1e-9, atol=1e-11, batch=None,
-                strips=None, keep=None, strip_max_len_deg=MAX_STRIP_DEG, strip_tilt_deg=STRIP_TILT_DEG):
+                strips=None, keep=None, strip_max_len_deg=MAX_STRIP_DEG, strip_tilt_deg=STRIP_TILT_DEG,
+                consider=None):
     """Propagate (x0, P0) over gap lengths dt_grid [TU] (starting with 0) from Julian
     date jd0. Returns a dict of arrays over dt_grid (angles in degrees).
     batch: integrate the Monte Carlo samples in chunks of this size. The samples share one
@@ -131,7 +132,14 @@ def predict_gap(x0, P0, dt_grid, jd0, mu, n_samples=500, rng=None, rtol=1e-9, at
     out["strip_cross99_deg"] give the 99th percentile of |along| and |cross| of the true samples.
     The other outputs do not depend on this option.
     keep: optional collection of dt_grid indices; with strips, out["_debug"][k] stores the sky samples
-    and strip geometry at those times (diagnostics only; absent by default)."""
+    and strip geometry at those times (diagnostics only; absent by default).
+    consider: optional dict for a TRUTH that differs from the operator's model (milestone 9):
+        "P_mc"   covariance of (truth - x0) used for the Monte Carlo samples, (6, 6), or (7, 7) when
+                 the 7th component is an error dp in the solar-pressure area-to-mass ratio;
+        "accel"  callable t [TU since the gap start] -> (3,) acceleration per unit dp (needed for 7x7).
+    The linear and UT predictions still use P0 and the unperturbed CR3BP (the operator's view), so
+    'claim' and 'actual' measure an operator who does not know about the extra error sources.
+    None (default) gives exactly the original behaviour."""
     rng = np.random.default_rng() if rng is None else rng
     dt_grid = np.asarray(dt_grid, float)
     M = len(dt_grid)
@@ -147,13 +155,19 @@ def predict_gap(x0, P0, dt_grid, jd0, mu, n_samples=500, rng=None, rtol=1e-9, at
     D = Ys - m_ut[:, None, :]
     P_ut = np.einsum("s,ksi,ksj->kij", ukf.Wc, D, D)
 
-    S0 = x0 + rng.standard_normal((n_samples, 6)) @ np.linalg.cholesky(P0).T
     floor = (R_EARTH_KM / LU_KM, R_MOON_KM / LU_KM)      # samples that would impact the Moon/Earth
-    if batch is None or n_samples <= batch:
-        Ymc = propagate_many_dense(S0, dt_grid, mu, rtol, atol, r_floor=floor)        # (M, n, 6)
+    if consider is None:
+        S0 = x0 + rng.standard_normal((n_samples, 6)) @ np.linalg.cholesky(P0).T
+        dp, accel = None, None
     else:
-        Ymc = np.concatenate([propagate_many_dense(S0[i:i + batch], dt_grid, mu, rtol, atol, r_floor=floor)
-                              for i in range(0, n_samples, batch)], axis=1)
+        Pm = np.asarray(consider["P_mc"], float)
+        D0 = rng.standard_normal((n_samples, len(Pm))) @ _sqrt_psd(0.5 * (Pm + Pm.T)).T
+        S0 = x0 + D0[:, :6]
+        dp, accel = (D0[:, 6], consider["accel"]) if len(Pm) == 7 else (None, None)
+    step = n_samples if (batch is None or n_samples <= batch) else batch
+    Ymc = np.concatenate([propagate_many_dense(S0[i:i + step], dt_grid, mu, rtol, atol, r_floor=floor,
+                                               p=None if dp is None else dp[i:i + step], accel=accel)
+                          for i in range(0, n_samples, step)], axis=1)                 # (M, n, 6)
 
     eph = Ephemeris(jd0 + dt_grid * TU_S / DAY_S)
     out = {k: np.zeros(M) for k in ("theta_ideal", "theta_lin_claim", "theta_lin_actual",

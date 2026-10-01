@@ -66,6 +66,8 @@ JAS_ORDER = {
     "fig14_gaussian_containment": 11,
     "fig16_tc_cr3bp_vs_ephemeris": 12,
     "fig17_growth_cr3bp_vs_ephemeris": 13,
+    "fig18_tc_vs_stability": 14,
+    "fig19_operator_vs_ideal": 15,
 }
 
 

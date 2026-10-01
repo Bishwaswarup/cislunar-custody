@@ -8,7 +8,7 @@ Target journal: *The Journal of the Astronautical Sciences* (Springer). Build th
 
 - [x] Springer Nature template (`sn-jnl`), numbered references in square brackets (`sn-mathphys-num`).
 - [x] Title page: author, department, institute, city, postcode, country, e-mail, ORCID.
-- [x] Abstract of about 245 words (limit 150–250). Abbreviations are spelled out.
+- [x] Abstract of about 247 words (limit 150–250; recount after any edit). Abbreviations are spelled out.
 - [x] Six keywords.
 - [x] At most three heading levels, all numbered.
 - [x] Declarations: funding, competing interests, data and code availability, author
@@ -16,7 +16,7 @@ Target journal: *The Journal of the Astronautical Sciences* (Springer). Build th
 - [x] References have DOIs where one exists. They were checked against Crossref and publisher
       pages. Jo et al. is updated to the 2026 *Astrodynamics* paper, and Iannamorelli & LeGrand to
       JAS 72(1) 2025.
-- [x] Figures are `figures/jas/Fig1…Fig13`, in vector PDF and 600 dpi TIFF:
+- [x] Figures are `figures/jas/Fig1…Fig15` (Fig14, Fig15 from `family_sweep.py --plots-only`), in vector PDF and 600 dpi TIFF:
   - 84 or 174 mm wide, with Arial/Helvetica-type lettering of 8–12 pt;
   - no titles inside the figures; panels are labelled **a**, **b**, …;
   - orbits and filters are told apart by line style or marker as well as colour;
@@ -44,7 +44,7 @@ Target journal: *The Journal of the Astronautical Sciences* (Springer). Build th
 - [ ] **Cover letter.** Give the one-paragraph contribution, why the paper fits JAS, and a
       statement that it is not under consideration elsewhere.
 - [ ] **Editorial Manager.** Upload `main.tex`, `references.bib`, `sn-jnl.cls`,
-      `sn-mathphys-num.bst`, `Fig1–Fig13` (PDF or TIFF) and the compiled `main.pdf`.
+      `sn-mathphys-num.bst`, `Fig1–Fig15` (PDF or TIFF) and the compiled `main.pdf`.
 
 ## Evidence that is right but statistically thin (`verify_claims.py` shows WEAK)
 
@@ -55,6 +55,23 @@ Target journal: *The Journal of the Astronautical Sciences* (Springer). Build th
 | Ephemeris UT log-R² = 0.90 at N = 1 | 42 finite cases, CI 0.59–1.00 | Sec. 9 gives n and the interval |
 | Ephemeris UT log-R² = 0.80 at N = 100 | 30 finite cases, CI 0.55–0.99 | Sec. 9 gives n and the interval |
 | Ephemeris, L1 halo, 1-day arcs | only 4 cases | Table 5 column n |
+| L2 halo family: ρ = −0.61, p = 0.14 | 7 members, 6 of them beyond 30 d | Sec. 10.1 states it openly |
+| Strip gains (cross-track 0.5″ vs 1.4″) | rest on the CRLB covariance without biases | Sec. 10.2 and Limitations; milestone 9 re-tests |
+
+## Milestone 8 in the paper: operator horizon as the headline
+
+- Sec. 4 defines the **operator horizon** (circle centred on the UT prediction). Tables 3 and 4 now
+  report it; the ideal horizon agrees to within 0.4 d (N ≤ 10) and 0.9 d (N = 100), median ratio 1.00.
+- Table 3 cells that moved (ideal → operator): L1 1-d N=10 11.0 → 10.9, N=100 12.8 → 12.7; L2 1-d
+  N=100 16.2 → 15.8; L2 3-d N=100 18.3 → 18.0; L2 7-d N=100 19.2 → 19.1; some percentiles by 0.1–0.3 d.
+- Table 4: the separate "UT-centred" column is gone; operator and ideal survival shares are identical.
+- Sec. 7 text: 13.9–19.2 → 13.9–19.1 d; gain 10 → 100 fields 1.7–3.6 → 1.7–3.3 d; 11.0–17.4 → 10.9–17.4 d.
+- New Sec. 10 "Horizon Across Orbit Families" with Fig. 14 (T_c vs ν) and Fig. 15 (operator vs ideal,
+  strip). New verifier claims FS1–FS6 (named FS, because F1/F2 are already the filter claims) and K14.
+- Sec. 8: "a linear predictor ... would point the telescopes at the wrong part of the sky" was too
+  strong (a circle centred on the linear prediction loses custody at nearly the same time as the
+  operator circle). Now: the linear failure lies in the predicted spread, not the predicted position.
+- Abstract, contributions, Discussion and Conclusions lead with the operator horizon and the family result.
 
 ## Numbers that changed with the 121-point gap grid (m8-fixes)
 

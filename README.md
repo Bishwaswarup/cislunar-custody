@@ -95,7 +95,7 @@ orbit is transitioned by multiple shooting (horizon ratio 0.93–1.01).
 <td><img src="figures/fig14_gaussian_containment.png"><br><sub><b>False custody.</b> Probability mass inside linear (dotted) and UT (solid) 99 % ellipses.</sub></td>
 </tr>
 <tr>
-<td><img src="figures/fig18_tc_vs_stability.png"><br><sub><b>Custody vs stability.</b> Operator horizon (UT-centred strip, 10 fields) across five families against stability index ν.</sub></td>
+<td><img src="figures/fig18_tc_vs_stability.png"><br><sub><b>Custody vs stability.</b> Operator horizon (UT-centred circle, 10 fields, 7-day arcs) across five families against stability index ν (paper Fig. 14).</sub></td>
 <td><img src="figures/fig19_operator_vs_ideal.png"><br><sub><b>Operator vs ideal.</b> Horizon with the search centred on the UT prediction (circle, strip) against the true-mean horizon.</sub></td>
 </tr>
 <tr>
@@ -164,8 +164,8 @@ pytest                                    # 52 tests, ~15 s
 | 6 | `python scripts/custody_study.py` | ~12 min | custody horizons, fig12–15 |
 | 7 | `python scripts/ephemeris_check.py` | ~6 min | DE440 + SRP cross-check, fig16–17 |
 | 8 | `python scripts/sensitivity_check.py` | ~5 min | Monte Carlo sample-size check (300 vs 2000) and gap-grid check (37 vs 121 points vs uniform 0.02 d) |
-| 9 | `python scripts/verify_claims.py` | ~20 s | checks every number in `paper/main.tex` against `data/` |
-| 10 | `python scripts/family_sweep.py` | ~25 min | operator horizons across whole families vs stability index, fig18–19 |
+| 9 | `python scripts/family_sweep.py` | ~25 min | operator horizons across whole families vs stability index, fig18–19 (paper Fig. 14–15) |
+| 10 | `python scripts/verify_claims.py` | ~20 s | checks every number in `paper/main.tex` against `data/` (needs `family_sweep.csv`) |
 
 Or run everything with `bash scripts/run_all.sh` (logs in `logs/`); `bash scripts/run_all.sh --check` only re-checks the paper.
 

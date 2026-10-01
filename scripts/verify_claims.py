@@ -15,7 +15,7 @@ data/, and a verdict:
 A copy of the report is written to data/claims_report.txt.
 
 Run order: build_catalogue -> visibility_study -> observability_study -> filter_study ->
-nonlinear_filter_study -> custody_study -> ephemeris_check -> sensitivity_check -> this.
+nonlinear_filter_study -> custody_study -> ephemeris_check -> sensitivity_check -> family_sweep -> this.
 """
 import argparse
 import csv
@@ -331,13 +331,14 @@ def claims_custody():
     cu = distinct(c)
     check_num(Claim("K0b", "Sec 4", "number of distinct arcs among the custody cases", 394, "394 are distinct"),
               float(len(cu)), 0)
-    tab3 = {  # Table 3: (orbit, arc): sigma0, {N: (p50, p10, p90)}
-        ("L1", 1): (20.0, {1: (8.8, 5.5, 9.9), 10: (11.0, 7.4, 12.4), 100: (12.8, 9.5, 13.8)}),
-        ("L1", 3): (5.1, {1: (11.7, 8.0, 12.4), 10: (13.2, 10.1, 14.1), 100: (14.9, 13.5, 17.4)}),
-        ("L1", 7): (0.7, {1: (14.3, 13.1, 15.3), 10: (16.5, 14.7, 18.4), 100: (18.5, 16.3, 20.0)}),
-        ("L2", 1): (30.2, {1: (9.5, 7.7, 11.2), 10: (12.5, 9.9, 15.3), 100: (16.2, 12.9, 18.2)}),
-        ("L2", 3): (15.5, {1: (10.3, 9.1, 13.4), 10: (14.9, 11.2, 16.5), 100: (18.3, 15.6, 19.0)}),
-        ("L2", 7): (7.0, {1: (13.9, 11.9, 15.8), 10: (17.4, 15.5, 18.3), 100: (19.2, 18.4, 21.4)}),
+    OP = "ut_actual"   # operator horizon: circle centred on the UT-predicted direction (headline since M8)
+    tab3 = {  # Table 3 (operator horizon): (orbit, arc): sigma0, {N: (p50, p10, p90)}
+        ("L1", 1): (20.0, {1: (8.8, 5.5, 9.9), 10: (10.9, 7.3, 12.4), 100: (12.7, 9.6, 13.7)}),
+        ("L1", 3): (5.1, {1: (11.7, 8.0, 12.5), 10: (13.2, 10.1, 14.2), 100: (14.9, 13.4, 17.3)}),
+        ("L1", 7): (0.7, {1: (14.3, 13.0, 15.3), 10: (16.5, 14.6, 18.4), 100: (18.5, 16.4, 20.0)}),
+        ("L2", 1): (30.2, {1: (9.5, 7.7, 11.2), 10: (12.5, 9.9, 15.3), 100: (15.8, 12.9, 18.0)}),
+        ("L2", 3): (15.5, {1: (10.3, 9.1, 13.5), 10: (14.9, 11.2, 16.6), 100: (18.0, 15.4, 18.9)}),
+        ("L2", 7): (7.0, {1: (13.9, 11.9, 15.8), 10: (17.4, 15.5, 18.6), 100: (19.1, 18.3, 21.2)}),
         ("NRHO", 1): (23.8, {1: (30, 5.3, 30), 10: (30, 18.4, 30), 100: (30, 30, 30)}),
         ("NRHO", 3): (3.9, {1: (30, 30, 30), 10: (30, 30, 30), 100: (30, 30, 30)}),
         ("NRHO", 7): (0.9, {1: (30, 30, 30), 10: (30, 30, 30), 100: (30, 30, 30)}),
@@ -350,10 +351,10 @@ def claims_custody():
         check_num(Claim(f"K1.{o}.{arc}.s0", "Table 3", f"{o} {arc}-d median sigma0 [km]", s0),
                   np.median([r["sig0_pos_km"] for r in sel]), 0.05)
         for N, (p50, p10, p90) in cells.items():
-            v = cap30([r[f"tc_ideal_N{N}"] for r in sel])
+            v = cap30([r[f"tc_{OP}_N{N}"] for r in sel])
             q10, q50, q90 = np.percentile(v, [10, 50, 90])
             ok = all(close(p, q, 0.05) or (p >= 30 and q >= 30) for p, q in ((p50, q50), (p10, q10), (p90, q90)))
-            record(Claim(f"K1.{o}.{arc}.N{N}", "Table 3", f"{o} {arc}-d T_c(N={N}) median (p10-p90)",
+            record(Claim(f"K1.{o}.{arc}.N{N}", "Table 3", f"{o} {arc}-d operator T_c(N={N}) median (p10-p90)",
                          f"{fmt_tc(p50)} ({fmt_tc(p10)}-{fmt_tc(p90)})"),
                    "PASS" if ok else "FAIL", f"{fmt_tc(q50)} ({fmt_tc(q10)}-{fmt_tc(q90)})", f"n={len(sel)}")
     # growth / text claims
@@ -388,36 +389,55 @@ def claims_custody():
                         "contains 98"), u14, 0.5)
     else:
         record(Claim("K2", "Sec 7", "growth-curve claims", None), "SKIP", "-", "missing custody_curves.npz")
-    med = lambda o, a, N: np.median(cap30([r[f"tc_ideal_N{N}"] for r in ph if r["orbit"] == ORB[o] and r["arc_d"] == a]))
+    med = lambda o, a, N: np.median(cap30([r[f"tc_{OP}_N{N}"] for r in ph if r["orbit"] == ORB[o] and r["arc_d"] == a]))
     gains = [med(o, a, 100) - med(o, a, 10) for o in ("L1", "L2") for a in (1, 3, 7)]
-    check_range(Claim("K6", "Sec 7", "gain from 10 -> 100 fields, unstable orbits [d]", (1.7, 3.6), "1.7--3.6"),
+    check_range(Claim("K6", "Sec 7", "gain from 10 -> 100 fields, unstable orbits [d]", (1.7, 3.3), "1.7--3.3"),
                 min(gains), max(gains), 0.05)
     t7 = [med(o, 7, N) for o in ("L1", "L2") for N in (1, 10, 100)]
-    check_range(Claim("K7", "Sec 7", "7-d arcs: median T_c for N=1..100, unstable [d]", (13.9, 19.2), "13.9--19.2"),
+    check_range(Claim("K7", "Sec 7", "7-d arcs: median operator T_c for N=1..100, unstable [d]", (13.9, 19.1), "13.9--19.1"),
                 min(t7), max(t7), 0.05)
     t10 = [med(o, a, 10) for o in ("L1", "L2") for a in (1, 3, 7)]
-    check_range(Claim("K8", "abstract / Sec 10", "median T_c(N=10), unstable orbits, all arcs [d]", (11.0, 17.4),
-                      "11.0--17.4"), min(t10), max(t10), 0.05)
+    check_range(Claim("K8", "Sec 7", "median operator T_c(N=10), unstable orbits, all arcs [d]", (10.9, 17.4),
+                      "10.9--17.4"), min(t10), max(t10), 0.05)
+    check_range(Claim("K8b", "abstract / Sec 12", "median operator T_c(N=10), unstable orbits, rounded [d]", (11, 17),
+                      "11--17\\,days"), round(min(t10)), round(max(t10)), 0)
+    check_range(Claim("K8c", "Sec 7", "L1 halo median operator T_c(N=10), 1-d -> 7-d arcs [d]", (10.9, 16.5),
+                      "from 10.9 to 16.5"), med("L1", 1, 10), med("L1", 7, 10), 0.05)
+    # operator (UT-centred) vs ideal (true-mean) horizon, all distinct arcs
+    dmax, rat = {}, []
+    for N in (1, 10, 100):
+        a_ = cap30([r[f"tc_ideal_N{N}"] for r in cu])
+        b_ = cap30([r[f"tc_{OP}_N{N}"] for r in cu])
+        dmax[N] = float(np.max(np.abs(b_ - a_)))
+        ok = (a_ > 0) & (a_ < 30)
+        rat.append(float(np.median(b_[ok] / a_[ok])))
+    check_num(Claim("K14a", "Sec 7", "max |operator - ideal T_c| over distinct arcs, N=1 and 10 [d]", 0.4,
+                    "within 0.4\\,d for $N \\le 10$"), max(dmax[1], dmax[10]), 0.05)
+    check_num(Claim("K14b", "Sec 7", "max |operator - ideal T_c| over distinct arcs, N=100 [d]", 0.9,
+                    "0.9\\,d for $N = 100$"), dmax[100], 0.05)
+    check_range(Claim("K14c", "Sec 7", "median operator/ideal T_c ratio over distinct arcs, N=1..100", (1.00, 1.00),
+                      "median ratio 1.00"), min(rat), max(rat), 0.005)
     # Table 4 blackouts
-    tab4 = {("NRHO", 1): (9, 10.5, 67, 78, 78, 78), ("NRHO", 3): (11, 10.5, 100, 100, 100, 100),
-            ("NRHO", 7): (11, 10.5, 100, 100, 100, 100),
-            ("L1", 1): (27, 3.1, 67, 89, 93, 89), ("L1", 3): (27, 3.1, 93, 96, 96, 96), ("L1", 7): (28, 3.1, 100, 100, 100, 100),
-            ("L2", 1): (34, 4.1, 65, 74, 94, 74), ("L2", 3): (34, 4.1, 79, 97, 97, 97), ("L2", 7): (34, 4.1, 91, 100, 100, 100),
-            ("DRO", 1): (13, 11.3, 46, 85, 85, 85), ("DRO", 3): (13, 11.3, 100, 100, 100, 100),
-            ("DRO", 7): (13, 11.3, 100, 100, 100, 100)}
+    tab4 = {("NRHO", 1): (9, 10.5, 67, 78, 78), ("NRHO", 3): (11, 10.5, 100, 100, 100),
+            ("NRHO", 7): (11, 10.5, 100, 100, 100),
+            ("L1", 1): (27, 3.1, 67, 89, 93), ("L1", 3): (27, 3.1, 93, 96, 96), ("L1", 7): (28, 3.1, 100, 100, 100),
+            ("L2", 1): (34, 4.1, 65, 74, 94), ("L2", 3): (34, 4.1, 79, 97, 97), ("L2", 7): (34, 4.1, 91, 100, 100),
+            ("DRO", 1): (13, 11.3, 46, 85, 85), ("DRO", 3): (13, 11.3, 100, 100, 100),
+            ("DRO", 7): (13, 11.3, 100, 100, 100)}
     surv = {}
-    for (o, a), (n, ml, s1, s10, s100, sut) in tab4.items():
+    for (o, a), (n, ml, s1, s10, s100) in tab4.items():
         sel = [r for r in bl if r["orbit"] == ORB[o] and r["arc_d"] == a]
         L = np.array([r["blackout_d"] for r in sel])
-        got = [len(sel), np.median(L)] + [100 * np.mean(np.array([r[f"tc_ideal_N{N}"] for r in sel]) >= L)
+        got = [len(sel), np.median(L)] + [100 * np.mean(np.array([r[f"tc_{OP}_N{N}"] for r in sel]) >= L)
                                             for N in (1, 10, 100)]
-        got.append(100 * np.mean(np.array([r["tc_ut_actual_N10"] for r in sel]) >= L))
+        ideal = [100 * np.mean(np.array([r[f"tc_ideal_N{N}"] for r in sel]) >= L) for N in (1, 10, 100)]
         surv[(o, a)] = got[3]
-        paper = [n, ml, s1, s10, s100, sut]
-        ok = all(close(p, g, t) for p, g, t in zip(paper, got, (0, 0.05, 0.5, 0.5, 0.5, 0.5)))
+        paper = [n, ml, s1, s10, s100]
+        ok = all(close(p, g, t) for p, g, t in zip(paper, got, (0, 0.05, 0.5, 0.5, 0.5)))
+        ok = ok and all(close(x, y, 1e-9) for x, y in zip(ideal, got[2:]))   # caption: ideal gives identical shares
         kN = int(round(got[3] * len(sel) / 100))
         lo, hi = wilson(kN, len(sel))
-        record(Claim(f"K9.{o}.{a}", "Table 4", f"{o} {a}-d blackouts: n, median length, survived N=1/10/100/UT",
+        record(Claim(f"K9.{o}.{a}", "Table 4", f"{o} {a}-d blackouts: n, median length, survived N=1/10/100 (operator = ideal)",
                      " / ".join(f"{x:g}" for x in paper)),
                "PASS" if ok else "FAIL", " / ".join(f"{x:.3g}" for x in got),
                f"N=10 survival 95% CI {100 * lo:.0f}-{100 * hi:.0f}%")
@@ -541,7 +561,7 @@ def claims_ephemeris():
 
 def claims_sensitivity():
     s = load("sensitivity_samples.csv")
-    c = Claim("S1", "Sec 10 limitations", "T_c converged in Monte Carlo sample size (300 vs larger sample)", None)
+    c = Claim("S1", "Sec 11 limitations", "T_c converged in Monte Carlo sample size (300 vs larger sample)", None)
     if s is None:
         return record(c, "SKIP", "-", "run scripts/sensitivity_check.py")
     big = [k for k in s[0] if k.startswith("tc_n") and not k.startswith("tc_n300")][0].split("_")[1]
@@ -567,22 +587,22 @@ def claims_sensitivity():
         meds.append(np.median(np.abs(a[fin] - b[fin])))
         if N >= 10:
             mx10 = max(mx10, np.max(np.abs(a[fin] - b[fin])))
-    check_num(Claim("S2", "Sec 10", "arcs in the sample-size check", 17, "17 representative arcs"), float(len(s)), 0)
-    check_range(Claim("S3", "Sec 10", "median |dT_c| 300 vs 2000 samples, N=1..100 [d]", (0.09, 0.14),
+    check_num(Claim("S2", "Sec 11", "arcs in the sample-size check", 17, "17 representative arcs"), float(len(s)), 0)
+    check_range(Claim("S3", "Sec 11", "median |dT_c| 300 vs 2000 samples, N=1..100 [d]", (0.09, 0.14),
                       "0.09--0.14\\,d"), min(meds), max(meds), 0.005)
-    check_num(Claim("S4", "Sec 10", "max |dT_c| for N=10 and 100 [d]", 0.9, "at most 0.9\\,d"), mx10, 0.05)
+    check_num(Claim("S4", "Sec 11", "max |dT_c| for N=10 and 100 [d]", 0.9, "at most 0.9\\,d"), mx10, 0.05)
     a = np.array([r["tc_n300_N1"] for r in s])
     b = np.array([r[f"tc_{big}_N1"] for r in s])
     fin = np.isfinite(a) & np.isfinite(b)
     i = int(np.flatnonzero(fin)[np.argmax(np.abs(a[fin] - b[fin]))])
     w = s[i]
-    check_range(Claim("S5", "Sec 10", "N=1 worst case: T_c with 300 and 2000 samples [d]", (5.3, 17.6),
+    check_range(Claim("S5", "Sec 11", "N=1 worst case: T_c with 300 and 2000 samples [d]", (5.3, 17.6),
                       "from 5.3 to 17.6\\,d"), a[i], b[i], 0.05)
     RESULTS[-1] = (RESULTS[-1][0], RESULTS[-1][1], RESULTS[-1][2], f"{w['orbit']} {w['scenario']} {w['arc_d']:g}-d arc")
     per = {"NRHO 9:2": json.load(open(DATA / "named_orbits.json"))["NRHO_9:2"]["period_days"]}
     ph = np.mod(w["t_end_day"] + a[i], per.get(w["orbit"], np.inf))
     ph = min(ph, per.get(w["orbit"], np.inf) - ph)
-    check_bool(Claim("S6", "Sec 10", "N=1 worst case is an NRHO arc whose 300-sample horizon ends at perilune (< 0.1 d)",
+    check_bool(Claim("S6", "Sec 11", "N=1 worst case is an NRHO arc whose 300-sample horizon ends at perilune (< 0.1 d)",
                      True, "perilune passage"), w["orbit"] == "NRHO 9:2" and ph < 0.1,
                f"{w['orbit']}, {ph:.3f} d from perilune")
     if "tc_uni_N1" in s[0]:
@@ -603,6 +623,111 @@ def claims_sensitivity():
         record(Claim("G1", "Sec 4", "grid convergence", None), "SKIP", "-", "sensitivity_check.py without uniform grid")
 
 
+def claims_families():
+    """Milestone 8: operator horizon and stability index across orbit families (family_sweep.py)."""
+    f = load("family_sweep.csv")
+    if f is None:
+        return skip(Claim("FS", "Sec 10", "family-sweep claims", None), "family_sweep.csv (run family_sweep.py)")
+    from scipy.stats import spearmanr
+    for r in f:
+        r["member"] = int(r["member"])
+    members = {(r["family"], r["member"]) for r in f}
+    check_num(Claim("FS1a", "Sec 10", "family sweep: number of members", 30, "30 members remain"), float(len(members)), 0)
+    check_num(Claim("FS1b", "Sec 10", "family sweep: number of cases", 413, "413 cases"), float(len(f)), 0)
+    # FS2: operator (UT-centred circle) vs ideal (true-mean circle)
+    rat, dmax = [], {}
+    for N in (1, 10, 100):
+        a = np.array([r[f"tc_ideal_N{N}"] for r in f])
+        b = cap30([r[f"tc_utc_N{N}"] for r in f])
+        ok = np.isfinite(a) & (a > 0) & (a < 30)
+        rat.append(float(np.median(b[ok] / a[ok])))
+        dmax[N] = float(np.max(np.abs(b - cap30(a))))
+    check_range(Claim("FS2a", "Sec 10 / abstract", "family sweep: median operator/ideal ratio, N=1..100", (1.00, 1.00),
+                      "is 1.00 for all three search sizes"), min(rat), max(rat), 0.005)
+    for cid, N, pv in (("FS2b", 1, 0.34), ("FS2c", 10, 0.19), ("FS2d", 100, 1.15)):
+        check_num(Claim(cid, "Sec 10", f"family sweep: max |operator - ideal T_c|, N={N} [d]", pv, f"{pv:.2f}\\,d"),
+                  dmax[N], 0.005)
+
+    # member medians (capped at 30 d), as in family_sweep.member_table
+    def table(arc, key="utc"):
+        out = []
+        for fam, mem in sorted(members):
+            sel = [r for r in f if r["family"] == fam and r["member"] == mem and r["arc_d"] == arc]
+            if sel:
+                out.append((fam, sel[0]["stability"], float(np.median(cap30([r[f"tc_{key}_N10"] for r in sel])))))
+        return out
+
+    def rho(m):
+        r_, p_ = spearmanr(np.log10([x[1] for x in m]), [x[2] for x in m])
+        return float(r_), float(p_), len(m)
+
+    # FS3: rank correlation with log10(nu), operator circle, N=10
+    hi = {arc: rho([x for x in table(arc) if x[1] > 10]) for arc in (3.0, 7.0)}
+    al = {arc: rho([x for x in table(arc) if x[1] > 1.01]) for arc in (3.0, 7.0)}
+    check_num(Claim("FS3a", "Sec 10 / abstract", "Spearman rho(T_c, log nu), nu > 10, 3-d arcs", -0.92,
+                    "$\\rho = -0.92$ (3-day arcs)"),
+              hi[3.0][0], 0.005)
+    check_num(Claim("FS3b", "Sec 10", "Spearman rho(T_c, log nu), nu > 10, 7-d arcs", -0.91, "$-0.91$ (7-day arcs)"),
+              hi[7.0][0], 0.005)
+    check_num(Claim("FS3c", "Sec 10", "members with nu > 10", 15, "15 members with $\\nu > 10$"), float(hi[3.0][2]), 0)
+    check_bool(Claim("FS3d", "Sec 10", "nu > 10 correlation significant, p < 1e-5 (both arcs)", True, "p < 10^{-5}"),
+               max(hi[3.0][1], hi[7.0][1]) < 1e-5, f"p = {hi[3.0][1]:.1g}, {hi[7.0][1]:.1g}")
+    check_range(Claim("FS3e", "Sec 10", "Spearman rho, all 25 members with nu > 1.01, 3-d and 7-d arcs", (-0.96, -0.91),
+                      "$-0.96$ and $-0.91$"), al[3.0][0], al[7.0][0], 0.005)
+    # FS4: within-family correlations; the L2 halo family is weak
+    fr = {(fam, arc): rho([x for x in table(arc) if x[0] == fam and x[1] > 1.01])
+          for fam in ("L1_halo_north", "L2_halo_south", "L1_lyapunov", "L2_lyapunov") for arc in (3.0, 7.0)}
+    l2 = [fr[("L2_halo_south", a)] for a in (3.0, 7.0)]
+    check_range(Claim("FS4a", "Sec 10", "L2 halo family rho, 3-d and 7-d arcs", (-0.61, -0.61), "$\\rho = -0.61$"),
+                l2[0][0], l2[1][0], 0.005)
+    check_num(Claim("FS4b", "Sec 10", "L2 halo family p-value", 0.14, "$p = 0.14$"), max(l2[0][1], l2[1][1]), 0.005,
+              weak="7 members, 6 of them capped at 30 d: no evidence either way within this family")
+    oth = [v[0] for k, v in fr.items() if k[0] != "L2_halo_south"]
+    check_range(Claim("FS4c", "Sec 10", "within-family rho, L1 halo and both Lyapunov families", (-1.00, -0.91),
+                      "between $-0.91$ and $-1.00$"), min(oth), max(oth), 0.005)
+    l2t = table(7.0)
+    nl = [x for x in l2t if x[0] == "L2_halo_south"]
+    check_bool(Claim("FS4d", "Sec 10", "six of seven L2 halo members have nu <= 1.7 and T_c > 30 d", True,
+                     "Six of its seven members"),
+               sum(1 for x in nl if x[1] <= 1.7 and x[2] >= 30) == 6 and len(nl) == 7,
+               f"{sum(1 for x in nl if x[1] <= 1.7 and x[2] >= 30)} of {len(nl)}")
+    # FS5: stable members and the range of unstable horizons (7-d arcs)
+    st = [x for x in l2t if x[1] < 3]
+    check_bool(Claim("FS5a", "Sec 10", "all members with nu < 3 keep custody > 30 d after 7-d arcs", True,
+                     "all 15 members with $\\nu < 3$"), len(st) == 15 and all(x[2] >= 30 for x in st), f"{len(st)} members")
+    t3 = [x for x in table(3.0) if x[1] < 3 and x[2] < 30]
+    check_bool(Claim("FS5c", "Sec 10", "3-d arcs: the only nu < 3 member lost within 30 d has nu = 2.9 and T_c = 27.0 d",
+                     True, "$\\nu = 2.9$, lost at 27.0\\,d"),
+               len(t3) == 1 and close(2.9, t3[0][1], 0.05) and close(27.0, t3[0][2], 0.05),
+               ", ".join(f"{x[0]} nu {x[1]:.2f} T_c {x[2]:.2f}" for x in t3))
+    big = sorted(round(x[1]) for x in l2t if x[1] > 10 and x[2] >= 30 and x[0] == "L1_lyapunov")
+    check_bool(Claim("FS5d", "Sec 10", "7-d arcs: nu > 10 members beyond 30 d are two L1 Lyapunov (nu 71, 113)", True,
+                     "($\\nu = 71$ and 113)"),
+               big == [71, 113] and sum(1 for x in l2t if x[1] > 10 and x[2] >= 30) == 2, str(big))
+    un = [x[2] for x in l2t if x[1] > 10 and x[2] < 30]
+    check_range(Claim("FS5b", "Sec 10 / Discussion", "finite member-median T_c, nu > 10, 7-d arcs [d]", (13.0, 25.2),
+                      "13.0--25.2\\,d"), min(un), max(un), 0.05)
+    # FS6: strip search (secondary)
+    for cid, N, pv in (("FS6a", 1, 0.97), ("FS6b", 10, 1.08), ("FS6c", 100, 0.98)):
+        a = np.array([r[f"tc_ideal_N{N}"] for r in f])
+        b = cap30([r[f"tc_strip_N{N}"] for r in f])
+        ok = np.isfinite(a) & (a > 0) & (a < 30)
+        check_num(Claim(cid, "Sec 10", f"strip/ideal median T_c ratio, N={N}", pv, "0.97, 1.08 and 0.98"),
+                  float(np.median(b[ok] / a[ok])), 0.005)
+    a = np.array([r["tc_ideal_N10"] for r in f])
+    b = np.array([r["tc_strip_N10"] for r in f])
+    fin = np.isfinite(a) & (a < 30)
+    gain = fin & (~np.isfinite(b) | (b > a + 3.0))
+    check_num(Claim("FS6d", "Sec 10", "N=10 cases where the strip gains > 3 d", 52, "52 of the 204"), float(gain.sum()), 0)
+    check_num(Claim("FS6e", "Sec 10", "N=10 cases with a finite ideal horizon", 204, "52 of the 204"), float(fin.sum()), 0)
+    lyap = sum(1 for r, g in zip(f, gain) if g and "lyapunov" in r["family"])
+    check_num(Claim("FS6f", "Sec 10", "gaining cases on the Lyapunov families", 48, "48 of them"), float(lyap), 0)
+    cg = np.median([r["strip_cross99_arcsec"] for r, g in zip(f, gain) if g])
+    co = np.median([r["strip_cross99_arcsec"] for r, g, x in zip(f, gain, fin) if x and not g])
+    check_range(Claim("FS6g", "Sec 10", "cross-track 99% half-width, gaining vs other cases [arcsec]", (0.5, 1.4),
+                      "0.5$''$"), cg, co, 0.05, weak="rests on the CRLB covariance (no biases); milestone 9 re-tests it")
+
+
 # ----------------------------------------------------------------------------- report
 def tex_check(tex):
     if tex is None:
@@ -616,7 +741,7 @@ def tex_check(tex):
 
 def main(only, texfile):
     for f in (claims_models, claims_visibility, claims_observability, claims_filters, claims_reacquisition,
-              claims_custody, claims_ephemeris, claims_sensitivity):
+              claims_custody, claims_ephemeris, claims_sensitivity, claims_families):
         try:
             f()
         except Exception as e:  # noqa: BLE001

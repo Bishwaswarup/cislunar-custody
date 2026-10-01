@@ -80,11 +80,13 @@ def jacobian(s, mu):
     return A
 
 
-def eom_many(t, Y, mu, r_floor=None):
+def eom_many(t, Y, mu, r_floor=None, p=None, accel=None):
     """Vectorised EOM for k stacked states: Y = [s_1, ..., s_k] (6k,).
     r_floor = (r1_min, r2_min) [LU] optionally floors the Earth/Moon distances used in the
     gravity terms. It only changes the force INSIDE the bodies (samples that would have
-    impacted), keeping the integrator from stalling at the singularity; None = exact."""
+    impacted), keeping the integrator from stalling at the singularity; None = exact.
+    p (k,), accel(t) -> (3,): optional extra acceleration p_i * accel(t) on state i (a perturbing
+    force with a per-sample scale, e.g. an error in the solar-pressure area-to-mass ratio)."""
     S = Y.reshape(-1, 6)
     x, y, z, vx, vy, vz = S.T
     r1 = np.sqrt((x + mu) ** 2 + y ** 2 + z ** 2)
@@ -99,6 +101,8 @@ def eom_many(t, Y, mu, r_floor=None):
     out[:, 3] = 2.0 * vy + x - c1 * (x + mu) - c2 * (x - 1.0 + mu)
     out[:, 4] = -2.0 * vx + y - (c1 + c2) * y
     out[:, 5] = -(c1 + c2) * z
+    if p is not None:
+        out[:, 3:6] += np.outer(p, accel(t))
     return out.ravel()
 
 
@@ -113,12 +117,14 @@ def propagate_many(S0, dt, mu, rtol=1e-10, atol=1e-12, method="DOP853"):
     return sol.y[:, -1].reshape(-1, 6)
 
 
-def propagate_many_dense(S0, t_eval, mu, rtol=1e-10, atol=1e-12, method="DOP853", r_floor=None):
+def propagate_many_dense(S0, t_eval, mu, rtol=1e-10, atol=1e-12, method="DOP853", r_floor=None,
+                         p=None, accel=None):
     """Propagate k states (k, 6) and return them at every t_eval (M,) [TU] -> (M, k, 6).
-    t_eval must start at 0 or later and be increasing. See eom_many for r_floor."""
+    t_eval must start at 0 or later and be increasing. See eom_many for r_floor, p and accel."""
     S0 = np.atleast_2d(np.asarray(S0, float))
     t_eval = np.asarray(t_eval, float)
-    sol = solve_ivp(eom_many, (0.0, t_eval[-1]), S0.ravel(), method=method, args=(mu, r_floor),
+    args = (mu, r_floor) if p is None else (mu, r_floor, np.asarray(p, float), accel)
+    sol = solve_ivp(eom_many, (0.0, t_eval[-1]), S0.ravel(), method=method, args=args,
                     rtol=rtol, atol=atol, t_eval=t_eval)
     if not sol.success:
         raise RuntimeError(f"CR3BP integration failed: {sol.message}")
