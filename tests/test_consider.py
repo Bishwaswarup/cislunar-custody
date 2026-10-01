@@ -45,20 +45,20 @@ def test_zero_consider_reproduces_crlb():
     ref = arc_information(orb, 0.0, t, rs, bm, [te], [be])[0]
     srp = SRPModel(JD0, -1.0, 2.0)
     ca = arc_consider(orb, 0.0, t, rs, bm, te, site_id=sid, rate=rate, srp=srp)
-    P, aug = ca.covariance()
+    P, aug, mean = ca.covariance()
     assert ca.observable == ref.observable
     assert np.allclose(P, ref.P_end, rtol=1e-10, atol=0)
-    assert np.allclose(aug[:6, :6], ref.P_end, rtol=1e-10, atol=0) and aug[6, 6] == 0.0
+    assert np.allclose(aug[:6, :6], ref.P_end, rtol=1e-10, atol=0) and aug[6, 6] == 0.0 and not mean.any()
 
 
 def test_consider_terms_scale_with_variance_and_are_psd():
     orb, t, rs, bm, sid, rate, te = _arc()
     ca = arc_consider(orb, 0.0, t, rs, bm, te, site_id=sid, rate=rate, srp=SRPModel(JD0, -1.0, 2.0))
-    P1, _ = ca.covariance(bias_arcsec=0.2)
-    P2, _ = ca.covariance(bias_arcsec=0.4)
+    P1, _, _ = ca.covariance(bias_arcsec=0.2)
+    P2, _, _ = ca.covariance(bias_arcsec=0.4)
     assert np.allclose(P2 - ca.P_crlb_end, 4.0 * (P1 - ca.P_crlb_end), rtol=1e-8, atol=1e-30)
     assert ca.sigma_pos_km(P1) > ca.sigma_pos_crlb_km
-    _, aug = ca.covariance(bias_arcsec=0.5, timing_s=0.01, srp_sigma=0.003)
+    _, aug, _ = ca.covariance(bias_arcsec=0.5, timing_s=0.01, srp_sigma=0.003, common_bias_arcsec=0.1)
     assert np.allclose(aug, aug.T) and np.linalg.eigvalsh(aug).min() > -1e-12 * np.abs(aug).max()
     assert aug[6, 6] == pytest.approx(0.003 ** 2)
 
@@ -95,3 +95,19 @@ def test_predict_gap_consider_with_same_covariance_is_unchanged():
     c = predict_gap(x0, P0, dt, JD0, MU_EM, n_samples=50, rng=np.random.default_rng(1),
                     consider={"P_mc": aug, "accel": SRPModel(JD0, 0.0, 1.5)})
     assert np.all(np.isfinite(c["theta_ideal"])) and np.array_equal(c["theta_ut_claim"], a["theta_ut_claim"])
+
+
+def test_common_bias_and_unmodelled_srp():
+    orb, t, rs, bm, sid, rate, te = _arc()
+    ca = arc_consider(orb, 0.0, t, rs, bm, te, site_id=sid, rate=rate, srp=SRPModel(JD0, -1.0, 2.0))
+    Pc, _, _ = ca.covariance(common_bias_arcsec=0.3)
+    Ps, _, _ = ca.covariance(bias_arcsec=0.3)
+    assert ca.sigma_pos_km(Pc) > ca.sigma_pos_crlb_km and ca.sigma_pos_km(Ps) > ca.sigma_pos_crlb_km
+    # one site only: a common bias is the same as that site's bias
+    one = sid == 0
+    c1 = arc_consider(orb, 0.0, t[one], rs[one], tuple(b[one] for b in bm), te, site_id=sid[one], rate=rate[one])
+    assert np.allclose(c1.covariance(common_bias_arcsec=0.3)[0], c1.covariance(bias_arcsec=0.3)[0], rtol=1e-10)
+    # a fixed SRP offset moves the mean linearly and leaves the covariance alone
+    P0, _, m1 = ca.covariance(srp_offset=0.01)
+    _, _, m2 = ca.covariance(srp_offset=0.02)
+    assert np.allclose(P0, ca.P_crlb_end) and np.allclose(m2, 2 * m1) and m1[6] == 0.01 and np.abs(m1[:6]).max() > 0

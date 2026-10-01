@@ -136,7 +136,9 @@ def predict_gap(x0, P0, dt_grid, jd0, mu, n_samples=500, rng=None, rtol=1e-9, at
     consider: optional dict for a TRUTH that differs from the operator's model (milestone 9):
         "P_mc"   covariance of (truth - x0) used for the Monte Carlo samples, (6, 6), or (7, 7) when
                  the 7th component is an error dp in the solar-pressure area-to-mass ratio;
-        "accel"  callable t [TU since the gap start] -> (3,) acceleration per unit dp (needed for 7x7).
+        "accel"  callable t [TU since the gap start] -> (3,) acceleration per unit dp (needed for 7x7);
+        "mean"   optional mean of the sampled (truth - x0[, dp]) (default 0), e.g. for an SRP force that
+                 the operator does not model at all (a fixed dp, so the truth drifts systematically).
     The linear and UT predictions still use P0 and the unperturbed CR3BP (the operator's view), so
     'claim' and 'actual' measure an operator who does not know about the extra error sources.
     None (default) gives exactly the original behaviour."""
@@ -162,6 +164,7 @@ def predict_gap(x0, P0, dt_grid, jd0, mu, n_samples=500, rng=None, rtol=1e-9, at
     else:
         Pm = np.asarray(consider["P_mc"], float)
         D0 = rng.standard_normal((n_samples, len(Pm))) @ _sqrt_psd(0.5 * (Pm + Pm.T)).T
+        D0 = D0 + np.asarray(consider.get("mean", np.zeros(len(Pm))), float)
         S0 = x0 + D0[:, :6]
         dp, accel = (D0[:, 6], consider["accel"]) if len(Pm) == 7 else (None, None)
     step = n_samples if (batch is None or n_samples <= batch) else batch

@@ -1,12 +1,14 @@
 """Fisher information / Cramer-Rao bound for angles-only tracking arcs.
 
-For measurements z_k = h(x(t_k)) + v_k, v_k ~ N(0, sigma^2 I_2) (RA, Dec), the
-information about the state at the arc start t0 is
+For measurements z_k = h(x(t_k)) + v_k (RA, Dec) with noise that is isotropic ON THE SKY,
+v_k ~ N(0, R_k), R_k = diag(sigma^2 / cos^2(dec_k), sigma^2) (as simulated by
+sensors.simulate_radec), the information about the state at the arc start t0 is
 
-    I(t0) = sum_k Phi(t_k, t0)^T H_k^T R^-1 H_k Phi(t_k, t0),
+    I(t0) = sum_k Phi(t_k, t0)^T H_k^T R_k^-1 H_k Phi(t_k, t0),
 
 with H_k = d(ra, dec)/d(r_eci) . d(r_eci)/d(r_syn) (angles do not depend on the
-instantaneous velocity). The CRLB at t0 is P0 = (I + I_prior)^-1 and at the arc end
+instantaneous velocity). It is computed in whitened sky coordinates (ra cos(dec), dec):
+the RA row of H_k is multiplied by cos(dec_k) and the weight is sigma^-2 for both rows. The CRLB at t0 is P0 = (I + I_prior)^-1 and at the arc end
 P_end = Phi(t_end, t0) P0 Phi(t_end, t0)^T. State units inside: LU and LU/TU.
 """
 from dataclasses import dataclass
@@ -31,6 +33,15 @@ def radec_jacobian(rho):
     J[:, 1, 0] = -x * z / (r2 * rxy)
     J[:, 1, 1] = -y * z / (r2 * rxy)
     J[:, 1, 2] = rxy / r2
+    return J
+
+
+def sky_jacobian(rho):
+    """d(ra cos(dec), dec)/d(rho): radec_jacobian with the RA row scaled by cos(dec), so that both
+    rows are on-sky angles and isotropic noise has covariance sigma^2 I. (N, 2, 3) rad/km."""
+    rho = np.atleast_2d(rho)
+    J = radec_jacobian(rho)
+    J[:, 0, :] *= (np.hypot(rho[:, 0], rho[:, 1]) / np.linalg.norm(rho, axis=1))[:, None]
     return J
 
 
@@ -80,7 +91,7 @@ def arc_information(orbit, t0, t_meas, r_site, basis_meas, t_ends, basis_ends, *
     Sk, Phik = S[k], Phi[k]
     xh, yh, zh = basis_meas
     r_eci = LU_KM * ((Sk[:, 0:1] + mu) * xh + Sk[:, 1:2] * yh + Sk[:, 2:3] * zh)
-    H3 = radec_jacobian(r_eci - r_site) @ eci_from_synodic_jacobian(basis_meas)   # (M, 2, 3)
+    H3 = sky_jacobian(r_eci - r_site) @ eci_from_synodic_jacobian(basis_meas)     # (M, 2, 3), on-sky
     H = np.concatenate([H3, np.zeros_like(H3)], axis=2)                            # (M, 2, 6)
     A = H @ Phik
     w = (sigma_arcsec * ARCSEC) ** -2

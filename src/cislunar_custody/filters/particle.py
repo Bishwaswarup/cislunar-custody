@@ -74,7 +74,7 @@ class ParticleFilter:
         return {**b, "X": X}
 
     def _loglik(self, X, m):
-        r = self.model.residual(m.z[None, :], self.model.h(X, m))
+        r = self.model.whiten(self.model.residual(m.z[None, :], self.model.h(X, m)), m)
         return -0.5 * np.sum(r ** 2, axis=1) / self.model.sigma ** 2
 
     def _ess_of(self, logw):

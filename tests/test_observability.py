@@ -60,3 +60,25 @@ def test_information_scales_with_inverse_noise_variance():
     a = arc_information(orb, 0.0, t, rs, bm, [te], [be], sigma_arcsec=1.0)[0].info
     b = arc_information(orb, 0.0, t, rs, bm, [te], [be], sigma_arcsec=2.0)[0].info
     assert np.allclose(a, 4.0 * b)
+
+
+def test_noise_model_is_isotropic_on_the_sky_everywhere():
+    """Simulator, filters and CRLB share one noise model: sigma on the sky in both axes,
+    i.e. R = diag(sigma^2 / cos^2(dec), sigma^2) in (RA, Dec)."""
+    from cislunar_custody.constants import MU_EM
+    from cislunar_custody.filters.common import AnglesModel, Measurement
+    from cislunar_custody.observability import sky_jacobian
+    from cislunar_custody.sensors import simulate_radec
+    from cislunar_custody.sensors.measurement import ARCSEC
+    rho = np.array([[200000.0, 150000.0, 230000.0]])                  # dec ~ 43 deg
+    ra0, dec0 = radec(rho)
+    rng = np.random.default_rng(3)
+    ra, dec = simulate_radec(np.repeat(rho, 20000, 0), np.zeros((20000, 3)), 1.0, rng)
+    d = np.stack([(ra - ra0 + np.pi) % (2 * np.pi) - np.pi, dec - dec0], 1)
+    m = Measurement(0.0, "x", np.zeros(3), (np.eye(3)[0], np.eye(3)[1], np.eye(3)[2]), np.r_[ra0, dec0])
+    R = AnglesModel(MU_EM, 1.0).R_for(m)
+    assert np.allclose(np.cov(d.T), R, rtol=0.05, atol=0.05 * R[1, 1])
+    # the CRLB rows are the same model, whitened: sky_jacobian^T sky_jacobian = J^T R^-1 J sigma^2
+    J = radec_jacobian(rho)[0]
+    Js = sky_jacobian(rho)[0]
+    assert np.allclose(Js.T @ Js, J.T @ np.linalg.inv(R) @ J * ARCSEC ** 2, rtol=1e-6)

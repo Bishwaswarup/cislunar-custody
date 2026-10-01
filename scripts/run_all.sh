@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Re-run the whole study, regenerate every figure and table, and check the paper's numbers.
-#   bash scripts/run_all.sh            # full run (~70 min on a laptop)
+#   bash scripts/run_all.sh            # full run (~100 min on a laptop)
 #   bash scripts/run_all.sh --check    # only re-check the paper against the existing data/
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -18,5 +18,6 @@ if [[ "${1:-}" != "--check" ]]; then
   python scripts/ephemeris_check.py                   2>&1 | tee logs/07_ephemeris.log
   python scripts/sensitivity_check.py                 2>&1 | tee logs/08_sensitivity.log
   python scripts/family_sweep.py                      2>&1 | tee logs/10_family_sweep.log
+  python scripts/consider_study.py                    2>&1 | tee logs/11_consider.log
 fi
 python scripts/verify_claims.py                       2>&1 | tee logs/09_verify_claims.log

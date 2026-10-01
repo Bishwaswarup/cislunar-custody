@@ -22,12 +22,24 @@ def wrap_pi(a):
 
 
 class AnglesModel:
-    """RA/Dec of a CR3BP state seen from a ground site (same mapping as the truth)."""
+    """RA/Dec of a CR3BP state seen from a ground site (same mapping as the truth).
+    The noise is isotropic on the sky (sigma in both axes), as simulated by sensors.simulate_radec,
+    so in (RA, Dec) the covariance is R_k = diag(sigma^2 / cos^2(dec), sigma^2) (R_for)."""
 
     def __init__(self, mu, sigma_arcsec=1.0):
         self.mu = mu
         self.sigma = sigma_arcsec * ARCSEC
-        self.R = np.eye(2) * self.sigma ** 2
+
+    def R_for(self, m):
+        """Measurement covariance in (RA, Dec) for measurement m (dec taken from the measurement)."""
+        c = np.cos(m.z[1])
+        return np.diag([(self.sigma / c) ** 2, self.sigma ** 2])
+
+    def whiten(self, r, m):
+        """Residuals (..., 2) in (RA, Dec) -> on-sky angles (ra cos(dec), dec), noise sigma^2 I."""
+        r = np.array(r, float)
+        r[..., 0] *= np.cos(m.z[1])
+        return r
 
     def _rho(self, S, m):
         S = np.atleast_2d(S)

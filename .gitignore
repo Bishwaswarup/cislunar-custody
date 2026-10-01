@@ -17,3 +17,4 @@ paper/*.out
 
 logs/
 paper/_test.*
+/.claude/

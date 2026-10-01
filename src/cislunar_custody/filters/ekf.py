@@ -23,9 +23,10 @@ class EKF(GaussianBeliefMixin):
     def update(self, x, P, m):
         H = self.model.H(x, m)
         r = self.model.residual(m.z, self.model.h(x, m)[0])
-        S = H @ P @ H.T + self.model.R
+        R = self.model.R_for(m)
+        S = H @ P @ H.T + R
         K = np.linalg.solve(S, H @ P).T
         x = x + K @ r
         A = np.eye(6) - K @ H
-        P = A @ P @ A.T + K @ self.model.R @ K.T
+        P = A @ P @ A.T + K @ R @ K.T
         return x, 0.5 * (P + P.T), r, S

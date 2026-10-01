@@ -1,21 +1,25 @@
 """Milestone 9: do the custody horizons survive realistic error sources?
 
 The paper's starting covariance is the Cramer-Rao bound (CRLB) of the tracking arc, which assumes
-white 1-arcsec noise only. Here the truth also carries the errors an operator does not model
-(observability/consider.py):
-    bias    a constant angle bias per site and axis (0.2 or 0.5 arcsec on the sky)
-    clock   a constant timing offset per site (1 or 10 ms)
-    srp     an error in the solar-pressure area-to-mass ratio, 10 or 30 % of 0.01 m^2/kg, which
-            biases the fit AND keeps pushing the truth during the gap
-and the combinations 'realistic' (0.2", 1 ms, 10 %) and 'pessimistic' (0.5", 10 ms, 30 %).
+white measurement noise only (1 arcsec per axis). Here the truth also carries errors that the operator
+does not model (observability/consider.py), z_k = h(x_k) + b_s + b_c + v_k:
+    bias<b>       constant angle bias per site and axis, sigma_b = b arcsec (nominal 0.1")
+    common<b>     common-mode bias shared by all sites (catalogue zonal errors, one reduction pipeline)
+    clock10ms     constant clock offset per site (topocentric rates are ~0.4"/s, so this is ~4 mas)
+    srp_am<A/m>   SRP modelled, area-to-mass ratio A/m uncertain by 30 % (random dp)
+    nosrp_am<A/m> SRP NOT modelled by the operator: the truth carries the full A/m (fixed dp)
+    nominal       0.1" per-site bias, 1 ms, SRP A/m 0.01 +- 30 %
+    conservative  0.5" per-site + 0.1" common bias, 10 ms, SRP A/m 0.05 +- 30 %
+and the same with 0.3" white noise instead of 1" (base_0.3, nominal_0.3, conservative_0.3).
+Each configuration is compared with its reference ('ref': base or base_0.3) on the same arcs.
 The operator still plans with the CRLB and the plain CR3BP, exactly as in custody_study.py, so
     ideal      true 99 % sky radius (true-mean circle)                   -> how big the truth is
     operator   circle centred on the operator's UT prediction            -> the paper's headline
     claim      when the operator's own (CRLB) 99 % region outgrows the search -> false custody
-Config 'base' has no extra errors and must reproduce data/custody_cases.csv exactly.
+Config 'base' has no extra errors and must reproduce data/custody_cases.csv.
 
     python scripts/consider_study.py                       # phase arcs every 30 d, 300 samples, all cores
-    python scripts/consider_study.py --step-days 90 --samples 100 --jobs 4     # quick look (~2 min)
+    python scripts/consider_study.py --step-days 90 --samples 100 --configs bias0.1 nominal   # quick look
     python scripts/consider_study.py --plots-only          # redraw from data/consider_cases.csv
 Outputs: data/consider_cases.csv, figures/fig20_consider_horizon.png, summary on stdout.
 """
@@ -48,17 +52,26 @@ from cislunar_custody.sensors import SITES, NETWORKS, TELESCOPES, network_visibi
 from cislunar_custody.timeutil import jd_from_iso, jd_grid, tu_from_jd  # noqa: E402
 
 ARCS_D = (1.0, 3.0, 7.0)
-# name: (bias [arcsec, on the sky, per site and axis], clock offset [s, per site], SRP A/m sigma [m^2/kg])
+
+def _cfg(noise=1.0, bias=0.0, common=0.0, clock=0.0, srp_sigma=0.0, srp_offset=0.0, ref="base"):
+    return dict(noise=noise, bias=bias, common=common, clock=clock, srp_sigma=srp_sigma, srp_offset=srp_offset,
+                ref=ref)
+
+
+SRP_FRAC = 0.30          # relative A/m uncertainty when SRP is modelled
 CONFIGS = {
-    "base":        (0.0, 0.0, 0.0),
-    "bias0.2":     (0.2, 0.0, 0.0),
-    "bias0.5":     (0.5, 0.0, 0.0),
-    "clock1ms":    (0.0, 1e-3, 0.0),
-    "clock10ms":   (0.0, 1e-2, 0.0),
-    "srp10":       (0.0, 0.0, 0.10 * AM_REF),
-    "srp30":       (0.0, 0.0, 0.30 * AM_REF),
-    "realistic":   (0.2, 1e-3, 0.10 * AM_REF),
-    "pessimistic": (0.5, 1e-2, 0.30 * AM_REF),
+    "base": _cfg(),
+    "bias0.05": _cfg(bias=0.05), "bias0.1": _cfg(bias=0.1), "bias0.2": _cfg(bias=0.2), "bias0.5": _cfg(bias=0.5),
+    "common0.1": _cfg(common=0.1), "common0.5": _cfg(common=0.5),
+    "clock10ms": _cfg(clock=1e-2),
+    **{f"srp_am{a:g}": _cfg(srp_sigma=SRP_FRAC * a) for a in (0.005, 0.01, 0.02, 0.05)},
+    **{f"nosrp_am{a:g}": _cfg(srp_offset=a) for a in (0.01, 0.05)},
+    "nominal": _cfg(bias=0.1, clock=1e-3, srp_sigma=SRP_FRAC * AM_REF),
+    "conservative": _cfg(bias=0.5, common=0.1, clock=1e-2, srp_sigma=SRP_FRAC * 0.05),
+    "base_0.3": _cfg(noise=0.3, ref="base_0.3"),
+    "nominal_0.3": _cfg(noise=0.3, bias=0.1, clock=1e-3, srp_sigma=SRP_FRAC * AM_REF, ref="base_0.3"),
+    "conservative_0.3": _cfg(noise=0.3, bias=0.5, common=0.1, clock=1e-2, srp_sigma=SRP_FRAC * 0.05,
+                             ref="base_0.3"),
 }
 OUT = ROOT / "data" / "consider_cases.csv"
 KEYS = ("ideal", "ut_actual", "ut_claim")
@@ -77,20 +90,24 @@ def run_case(c):
     orb = _orbit(c["orbit"])
     t0, te, i_end = c["t0"], c["t_end_tu"], c["i_end"]
     srp = SRPModel(c["jd0"], t0 - 0.05, te + (DT_DAYS[-1] + 1.0) * DAY_S / TU_S)
-    ca = arc_consider(orb, t0, c["t_meas"], c["r_site"], c["basis"], te - t0,
-                      site_id=c["site_id"], rate=c["rate"], srp=srp, sigma_arcsec=SIGMA)
-    if not ca.observable:
+    arcs = {}
+    for noise in sorted({cf["noise"] for cf in c["configs"].values()}, reverse=True):
+        arcs[noise] = arc_consider(orb, t0, c["t_meas"], c["r_site"], c["basis"], te - t0, site_id=c["site_id"],
+                                   rate=c["rate"], srp=srp, sigma_arcsec=noise)
+    if not arcs[max(arcs)].observable:                  # same arcs as custody_study (1-arcsec test)
         return []
     x_end = orb.states_at(te)[0]
     gap_srp = srp.shifted(te)
     dt_tu = DT_DAYS * DAY_S / TU_S
     rows = []
-    for name, (b, tau, sp) in c["configs"].items():
-        P, aug = ca.covariance(bias_arcsec=b, timing_s=tau, srp_sigma=sp)
-        if name == "base":
+    for name, cf in c["configs"].items():
+        ca = arcs[cf["noise"]]
+        P, aug, mean = ca.covariance(bias_arcsec=cf["bias"], timing_s=cf["clock"], srp_sigma=cf["srp_sigma"],
+                                     common_bias_arcsec=cf["common"], srp_offset=cf["srp_offset"])
+        if name in ("base", "base_0.3"):
             cons = None
-        elif sp > 0:
-            cons = {"P_mc": aug, "accel": gap_srp}
+        elif cf["srp_sigma"] > 0 or cf["srp_offset"] != 0:
+            cons = {"P_mc": aug, "mean": mean, "accel": gap_srp}
         else:
             cons = {"P_mc": P}
         try:
@@ -99,8 +116,9 @@ def run_case(c):
         except RuntimeError:
             continue
         row = {"orbit": c["orbit"]["name"], "arc_d": c["arc_d"], "t_end_day": c["t_end_day"], "config": name,
-               "bias_arcsec": b, "clock_s": tau, "srp_sigma": sp,
-               "sig0_crlb_km": ca.sigma_pos_crlb_km, "sig0_km": ca.sigma_pos_km(P),
+               "ref": cf["ref"], "noise_arcsec": cf["noise"], "bias_arcsec": cf["bias"],
+               "common_bias_arcsec": cf["common"], "clock_s": cf["clock"], "srp_sigma": cf["srp_sigma"],
+               "srp_offset": cf["srp_offset"], "sig0_crlb_km": ca.sigma_pos_crlb_km, "sig0_km": ca.sigma_pos_km(P),
                "theta0_arcsec": float(pred["theta_ideal"][0] * 3600)}
         for N in N_FIELDS:
             tc = custody_horizons(pred, search_radius_deg(FOV_DEG, N))
@@ -160,9 +178,9 @@ def build_cases(step_days, n_samples, configs, orbits):
 
 def main(step_days, n_samples, jobs, configs, orbits):
     t_start = time.time()
-    configs = {k: CONFIGS[k] for k in (configs or CONFIGS)}
-    if "base" not in configs:
-        configs = {"base": CONFIGS["base"], **configs}
+    names = list(configs or CONFIGS)
+    names = list(dict.fromkeys([CONFIGS[k]["ref"] for k in names] + names))     # references first
+    configs = {k: CONFIGS[k] for k in names}
     cases = build_cases(step_days, n_samples, configs, orbits)
     print(f"{len(cases)} arcs x {len(configs)} configs, {jobs} worker(s)", flush=True)
     rows = []
@@ -195,8 +213,9 @@ def _fmt(x):
 
 
 def _pairs(rows, cfg, key="tc_ut_actual_N10"):
-    """(baseline, config) values for the same arcs."""
-    base = {(r["orbit"], r["arc_d"], r["t_end_day"]): r for r in rows if r["config"] == "base"}
+    """(reference, config) values for the same arcs; the reference is the config's own baseline."""
+    ref = next((r["ref"] for r in rows if r["config"] == cfg), "base")
+    base = {(r["orbit"], r["arc_d"], r["t_end_day"]): r for r in rows if r["config"] == ref}
     out = [(base[k][key], r[key], r) for r in rows if r["config"] == cfg
            for k in [(r["orbit"], r["arc_d"], r["t_end_day"])] if k in base]
     return out
@@ -225,17 +244,17 @@ def report(rows):
         print(f"\nBaseline check: {n} base arcs matched in custody_cases.csv, max |dT_c| = {d:.3g} d (should be < 1e-3 with --samples 300)")
 
     print("\nStarting uncertainty: median largest 1-sigma position axis at the gap start [km] (CRLB -> with errors)")
-    print(f"  {'orbit':22s} {'arc':>4s} " + " ".join(f"{c:>11s}" for c in cfgs))
+    print(f"  {'orbit':22s} {'arc':>4s} " + " ".join(f"{c:>16s}" for c in cfgs))
     for o in orbits:
         for arc in ARCS_D:
             sel = [r for r in rows if r["orbit"] == o and r["arc_d"] == arc]
             if not sel:
                 continue
             cells = [np.median([r["sig0_km"] for r in sel if r["config"] == c]) for c in cfgs]
-            print(f"  {o:22s} {arc:3.0f}d " + " ".join(f"{x:11.2f}" for x in cells))
+            print(f"  {o:22s} {arc:3.0f}d " + " ".join(f"{x:16.2f}" for x in cells))
 
     print("\nOperator horizon (UT-centred circle), N=10: median over arcs [d]")
-    print(f"  {'orbit':22s} {'arc':>4s} {'n':>3s} " + " ".join(f"{c:>11s}" for c in cfgs))
+    print(f"  {'orbit':22s} {'arc':>4s} {'n':>3s} " + " ".join(f"{c:>16s}" for c in cfgs))
     for o in orbits:
         for arc in ARCS_D:
             sel = [r for r in rows if r["orbit"] == o and r["arc_d"] == arc]
@@ -243,10 +262,11 @@ def report(rows):
                 continue
             n = sum(r["config"] == "base" for r in sel)
             cells = [np.median(_cap([r["tc_ut_actual_N10"] for r in sel if r["config"] == c])) for c in cfgs]
-            print(f"  {o:22s} {arc:3.0f}d {n:3d} " + " ".join(f"{_fmt(x):>11s}" for x in cells))
+            print(f"  {o:22s} {arc:3.0f}d {n:3d} " + " ".join(f"{_fmt(x):>16s}" for x in cells))
 
-    print("\nChange against the CRLB baseline, all arcs with a baseline operator horizon < 30 d")
-    print(f"  {'config':12s} {'N':>4s} {'n':>4s} {'median ratio':>13s} {'p10 ratio':>10s} {'drop>20%':>9s} "
+    print("\nChange against the configuration's own CRLB reference (base, or base_0.3 for the 0.3-arcsec runs), "
+          "all arcs with a reference operator horizon < 30 d")
+    print(f"  {'config':16s} {'N':>4s} {'n':>4s} {'median ratio':>13s} {'p10 ratio':>10s} {'drop>20%':>9s} "
           f"{'ideal ratio':>12s} {'false custody (claim>1.1 actual)':>34s}")
     for c in cfgs:
         for N in N_FIELDS:
@@ -258,12 +278,12 @@ def report(rows):
             pi = _pairs(rows, c, f"tc_ideal_N{N}")
             ri = np.array([min(b, 30.0) / a for a, b, _ in pi if np.isfinite(a) and a < 30])
             fc = np.mean([r[f"tc_ut_claim_N{N}"] > 1.1 * r[f"tc_ut_actual_N{N}"] for _, _, r in ok])
-            print(f"  {c:12s} {N:4d} {len(ok):4d} {np.median(ratio):13.3f} {np.percentile(ratio, 10):10.3f} "
+            print(f"  {c:16s} {N:4d} {len(ok):4d} {np.median(ratio):13.3f} {np.percentile(ratio, 10):10.3f} "
                   f"{100 * np.mean(ratio < 0.8):8.1f}% {np.median(ri):12.3f} {100 * fc:33.1f}%")
 
     print("\nNear-stable orbits: arcs whose operator horizon (N=10) falls from > 30 d to <= 30 d")
     for c in cfgs:
-        if c == "base":
+        if c in ("base", "base_0.3"):
             continue
         cells = []
         for o in orbits:
@@ -271,56 +291,59 @@ def report(rows):
             pr = [(a, b) for a, b, r in pr if r["orbit"] == o and not (np.isfinite(a) and a < 30)]
             if pr:
                 cells.append(f"{o.split()[0]} {sum(np.isfinite(b) and b < 30 for a, b in pr)}/{len(pr)}")
-        print(f"  {c:12s} " + "   ".join(cells))
+        print(f"  {c:16s} " + "   ".join(cells))
+
+
+FIG_CONFIGS = ("bias0.05", "bias0.1", "bias0.2", "bias0.5", "common0.1", "common0.5", "clock10ms",
+               "srp_am0.005", "srp_am0.01", "srp_am0.02", "srp_am0.05", "nosrp_am0.01", "nosrp_am0.05",
+               "nominal", "conservative", "nominal_0.3", "conservative_0.3")
 
 
 def plots(rows):
     use_jas_style()
-    cfgs = [c for c in dict.fromkeys(r["config"] for r in rows)]
+    have = {r["config"] for r in rows}
+    cfgs = [c for c in FIG_CONFIGS if c in have]
     orbits = [o for o in ORBIT_STYLE if any(r["orbit"] == o for r in rows)]
     x = np.arange(len(cfgs))
-    fig, axes = plt.subplots(1, 2, figsize=(DOUBLE, 0.42 * DOUBLE))
-    off = np.linspace(-0.24, 0.24, max(len(orbits), 1))
+    fig, axes = plt.subplots(2, 1, figsize=(DOUBLE, 0.62 * DOUBLE), sharex=True)
+    off = np.linspace(-0.27, 0.27, max(len(orbits), 1))
     for j, o in enumerate(orbits):
         st = ORBIT_STYLE[o]
         med, lo, hi = [], [], []
         for c in cfgs:
-            pr = [(r["sig0_km"], b) for r in rows if r["orbit"] == o and r["config"] == c
-                  for b in [next(q["sig0_km"] for q in rows if q["config"] == "base" and q["orbit"] == o
-                                 and q["arc_d"] == r["arc_d"] and q["t_end_day"] == r["t_end_day"])]]
-            v = np.array([a / b for a, b in pr])
+            v = np.array([b / a for a, b, r in _pairs(rows, c, "sig0_km") if r["orbit"] == o])
             med.append(np.median(v)), lo.append(np.percentile(v, 10)), hi.append(np.percentile(v, 90))
         axes[0].errorbar(x + off[j], med, yerr=[np.subtract(med, lo), np.subtract(hi, med)], ls="none",
-                         marker=st["marker"], color=st["color"], ms=4, elinewidth=0.7, capsize=0,
+                         marker=st["marker"], color=st["color"], ms=3.5, elinewidth=0.7, capsize=0,
                          label=ORBIT_LABEL[o])
     axes[0].set_yscale("log")
-    fmt = matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}")
-    axes[0].yaxis.set_major_formatter(fmt)
-    axes[0].yaxis.set_minor_formatter(fmt)
-    axes[0].set_ylabel("starting uncertainty / CRLB\n(largest position axis)")
+    axes[0].yaxis.set_major_locator(matplotlib.ticker.FixedLocator([1, 2, 5, 10, 20, 50]))
+    axes[0].yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}"))
+    axes[0].yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+    axes[0].set_ylim(0.9, None)
+    axes[0].set_ylabel("starting uncertainty\n/ CRLB reference")
     unstable = [o for o in orbits if "halo" in o or "Lyapunov" in o]
     for j, o in enumerate(unstable):
         st = ORBIT_STYLE[o]
         med, lo, hi = [], [], []
         for c in cfgs:
-            pr = [(a, b) for a, b, r in _pairs(rows, c) if r["orbit"] == o and np.isfinite(a) and a < 30]
-            v = np.array([min(b, 30.0) / a for a, b in pr])
+            v = np.array([min(b, 30.0) / a for a, b, r in _pairs(rows, c)
+                          if r["orbit"] == o and np.isfinite(a) and a < 30])
             med.append(np.median(v)), lo.append(np.percentile(v, 10)), hi.append(np.percentile(v, 90))
         axes[1].errorbar(x + (j - 0.5) * 0.3, med, yerr=[np.subtract(med, lo), np.subtract(hi, med)], ls="none",
-                         marker=st["marker"], color=st["color"], ms=4, elinewidth=0.7, capsize=0,
+                         marker=st["marker"], color=st["color"], ms=3.5, elinewidth=0.7, capsize=0,
                          label=ORBIT_LABEL[o])
     axes[1].axhline(0.8, color="grey", ls=(0, (4, 2)), lw=0.6)
     axes[1].axhline(1.0, color="k", lw=0.5)
-    axes[1].set_ylabel("operator $T_c$ / CRLB baseline\n(N = 10)")
-    lo_ = axes[1].get_ylim()[0]
-    axes[1].set_ylim(min(lo_, 0.75), None)
+    axes[1].set_ylabel("operator $T_c$ / reference\n(N = 10)")
+    axes[1].set_ylim(min(axes[1].get_ylim()[0], 0.75), None)
+    axes[1].set_xticks(x)
+    axes[1].set_xticklabels(cfgs, rotation=45, ha="right")
     for ax, letter in zip(axes, "ab"):
-        ax.set_xticks(x)
-        ax.set_xticklabels(cfgs, rotation=45, ha="right")
         ax.grid(True, axis="y")
         panel_label(ax, letter)
-    axes[0].legend(loc="upper left", ncol=2)
-    axes[1].legend(loc="lower left")
+    axes[0].legend(loc="upper left", ncol=4)
+    axes[1].legend(loc="lower left", ncol=2)
     fig.tight_layout()
     save(fig, "fig20_consider_horizon", ROOT)
 
@@ -328,7 +351,7 @@ def plots(rows):
 def load_rows():
     rows = []
     for r in csv.DictReader(open(OUT)):
-        rows.append({k: (v if k in ("orbit", "config") else float(v)) for k, v in r.items()})
+        rows.append({k: (v if k in ("orbit", "config", "ref") else float(v)) for k, v in r.items()})
     return rows
 
 

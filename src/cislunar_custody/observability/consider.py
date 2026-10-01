@@ -3,10 +3,17 @@ covariance of an angles-only tracking arc (milestone 9).
 
 fisher.py gives the Cramer-Rao bound, which assumes that white measurement noise is the only
 error. Real tracking also has, per site,
-    * a constant angle bias b (catalogue and astrometric systematics), sigma_b per sky axis,
-    * a constant clock (timing) offset tau, sigma_tau,
+    * a constant angle bias b_s (calibration, plate solution, optics), sigma_b per sky axis,
+    * a constant clock (timing) offset tau_s, sigma_tau,
+for the whole network
+    * a common-mode angle bias b_c shared by all sites (catalogue zonal errors, a shared
+      reduction pipeline), sigma_c per sky axis,
 and, for the whole arc and gap,
-    * an error dp in the solar-radiation-pressure (SRP) area-to-mass ratio, sigma_p [m^2/kg].
+    * an error dp in the solar-radiation-pressure (SRP) area-to-mass ratio [m^2/kg]: either
+      random, dp ~ N(0, sigma_p^2) (SRP modelled, A/m uncertain), or a fixed offset dp = A/m
+      (SRP not modelled at all by the operator).
+So z_k = h(x_k) + b_s + b_c + v_k: the biases do NOT average down with the number of
+measurements, unlike the white noise v_k.
 They are 'consider' parameters c ~ N(0, C): the estimator does not solve for them. With
 z_k = h_k(x) + G_k c + v_k, A_k = H_k Phi(t_k, t0) and W = R^-1 (as in fisher.py), the weighted
 least-squares estimate of the arc-start state x0 has the error
@@ -18,9 +25,10 @@ while the truth also carries the SRP displacement Psi(t) = dx(t)/dp, so the arc-
 For the gap, the truth is sampled from the joint covariance of (x - x_hat, dp) (7 x 7); dp then
 keeps acting during the gap (custody.predict_gap, argument 'consider').
 
-Measurement partials (RA, Dec in radians, as in fisher.py):
-    bias    G = diag(1 / cos(dec), 1)  (sigma_b is an on-sky angle in both axes)
-    timing  G = d(ra, dec)/dt          (topocentric angular rate, supplied by the caller)
+Measurement partials, in the whitened on-sky coordinates (ra cos(dec), dec) of fisher.py, where the
+white noise is sigma^2 I:
+    bias    G = I                       (sigma_b, sigma_c are on-sky angles in both axes)
+    timing  G = (cos(dec) d(ra)/dt, d(dec)/dt)   (topocentric rate; the caller supplies d(ra, dec)/dt)
     SRP     G = H_k Psi(t_k)
 """
 from dataclasses import dataclass
@@ -33,7 +41,7 @@ from ..dynamics.cr3bp import eom, jacobian, propagate
 from ..frames.ephemeris import AU_KM, sun_position
 from ..frames.synodic import synodic_basis
 from ..sensors.measurement import ARCSEC
-from .fisher import crlb, eci_from_synodic_jacobian, radec_jacobian
+from .fisher import crlb, eci_from_synodic_jacobian, sky_jacobian
 
 P_SUN_1AU = 4.56e-6          # solar radiation pressure at 1 au [N m^-2]
 CR_REF = 1.3                 # reflectivity coefficient (as in the ephemeris check)
@@ -92,24 +100,29 @@ class ConsiderArc:
 
     def columns(self):
         n = self.n_sites
-        return {"bias": np.arange(0, 2 * n), "timing": np.arange(2 * n, 3 * n), "srp": np.array([3 * n])}
+        return {"bias": np.arange(0, 2 * n), "timing": np.arange(2 * n, 3 * n),
+                "common": np.arange(3 * n, 3 * n + 2), "srp": np.array([3 * n + 2])}
 
-    def C(self, bias_arcsec=0.0, timing_s=0.0, srp_sigma=0.0):
+    def C(self, bias_arcsec=0.0, timing_s=0.0, srp_sigma=0.0, common_bias_arcsec=0.0):
         n = self.n_sites
         return np.diag(np.r_[np.full(2 * n, (bias_arcsec * ARCSEC) ** 2), np.full(n, timing_s ** 2),
-                             srp_sigma ** 2])
+                             np.full(2, (common_bias_arcsec * ARCSEC) ** 2), srp_sigma ** 2])
 
-    def covariance(self, bias_arcsec=0.0, timing_s=0.0, srp_sigma=0.0):
-        """(P_end, P_aug): consider covariance of the arc-end error (6, 6), and the joint covariance
-        of (truth - estimate, dp) (7, 7) to sample the truth for the gap."""
-        C = self.C(bias_arcsec, timing_s, srp_sigma)
+    def covariance(self, bias_arcsec=0.0, timing_s=0.0, srp_sigma=0.0, common_bias_arcsec=0.0, srp_offset=0.0):
+        """(P_end, P_aug, mean_aug).
+        P_end: consider covariance of the arc-end error (6, 6) (random parts only);
+        P_aug, mean_aug: covariance (7, 7) and mean (7,) of (truth - estimate, dp), to sample the truth
+        for the gap. srp_offset is a FIXED area-to-mass error (SRP not modelled by the operator): it
+        shifts the mean, not the covariance."""
+        C = self.C(bias_arcsec, timing_s, srp_sigma, common_bias_arcsec)
         P = self.P_crlb_end + self.S_end @ C @ self.S_end.T
         P = 0.5 * (P + P.T)
         aug = np.zeros((7, 7))
         aug[:6, :6] = P
         aug[:6, 6] = aug[6, :6] = -(self.S_end @ C)[:, -1]       # truth - estimate = -e
         aug[6, 6] = srp_sigma ** 2
-        return P, aug
+        mean = np.r_[-self.S_end[:, -1] * srp_offset, srp_offset]
+        return P, aug, mean
 
     def sigma_pos_km(self, P):
         return float(np.sqrt(max(np.linalg.eigvalsh(P[:3, :3]).max(), 0.0)) * LU_KM)
@@ -141,7 +154,7 @@ def arc_consider(orbit, t0, t_meas, r_site, basis_meas, t_end, *, site_id, rate,
     xh, yh, zh = basis_meas
     r_eci = LU_KM * ((Sk[:, 0:1] + mu) * xh + Sk[:, 1:2] * yh + Sk[:, 2:3] * zh)
     rho = r_eci - r_site
-    H3 = radec_jacobian(rho) @ eci_from_synodic_jacobian(basis_meas)
+    H3 = sky_jacobian(rho) @ eci_from_synodic_jacobian(basis_meas)               # on-sky, as fisher.py
     H = np.concatenate([H3, np.zeros_like(H3)], axis=2)                          # (M, 2, 6)
     A = H @ Phik
     w = (sigma_arcsec * ARCSEC) ** -2
@@ -149,13 +162,15 @@ def arc_consider(orbit, t0, t_meas, r_site, basis_meas, t_end, *, site_id, rate,
     P_x = crlb(info, prior_sigma_pos_km, prior_sigma_vel_kms)
 
     M = len(tau)
-    n_c = 3 * n_sites + 1
+    n_c = 3 * n_sites + 3
     G = np.zeros((M, 2, n_c))
     cosd = np.sqrt(rho[:, 0] ** 2 + rho[:, 1] ** 2) / np.linalg.norm(rho, axis=1)
     m = np.arange(M)
-    G[m, 0, 2 * site_id] = 1.0 / cosd
+    G[m, 0, 2 * site_id] = 1.0
     G[m, 1, 2 * site_id + 1] = 1.0
-    G[m, :, 2 * n_sites + site_id] = rate
+    G[m, :, 2 * n_sites + site_id] = rate * np.stack([cosd, np.ones(M)], axis=1)
+    G[m, 0, 3 * n_sites] = 1.0
+    G[m, 1, 3 * n_sites + 1] = 1.0
     psi_end = np.zeros(6)
     if srp is not None:
         psi = propagate_srp_sensitivity(x0, grid, mu, lambda t: srp(t0 + t))

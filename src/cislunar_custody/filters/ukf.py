@@ -58,7 +58,7 @@ class UKF(GaussianBeliefMixin):
         zbar = ref + self.Wm @ dZ
         dZ = self.model.residual(Z, zbar)
         dX = X - (self.Wm @ X)
-        S = (self.Wc[:, None] * dZ).T @ dZ + self.model.R
+        S = (self.Wc[:, None] * dZ).T @ dZ + self.model.R_for(m_)
         Pxz = (self.Wc[:, None] * dX).T @ dZ
         K = np.linalg.solve(S, Pxz.T).T
         r = self.model.residual(m_.z, zbar)
