@@ -1,6 +1,6 @@
 %% Manuscript for The Journal of the Astronautical Sciences (Springer Nature LaTeX template, sn-jnl).
 %% Build:  pdflatex main && bibtex main && pdflatex main && pdflatex main
-%% Figures: figures/jas/Fig1.pdf ... Fig15.pdf (vector) and Fig*.tif (600 dpi) from the scripts.
+%% Figures: figures/jas/Fig1.pdf ... Fig16.pdf (vector) and Fig*.tif (600 dpi) from the scripts.
 \documentclass[pdflatex,sn-mathphys-num]{sn-jnl}
 
 \usepackage{graphicx}
@@ -27,23 +27,22 @@
 
 \affil*[1]{\orgdiv{Department of Physics}, \orgname{Indian Institute of Science}, \orgaddress{\city{Bengaluru}, \postcode{560012}, \state{Karnataka}, \country{India}}}
 
-\abstract{Ground-based telescopes, the most accessible cislunar sensors, lose sight of their targets
-for days at a time. This paper quantifies the custody horizon: how long an object on a cislunar
+\abstract{Ground-based telescopes lose cislunar objects for days at a time. This paper quantifies the custody horizon: how long an object on a cislunar
 periodic orbit can go unobserved before it leaves a telescope search pattern centred on the operator's
 own unscented-transform prediction. Four Earth--Moon orbits (the 9:2 near-rectilinear halo
 orbit, an $L_1$ halo, an $L_2$ Lyapunov orbit and a distant retrograde orbit) are observed for one
 year by a simulated four-site network of 1\,m telescopes. The targets stay within 14$^\circ$ of the
 Moon, so the Moon-exclusion angle matters more than aperture, and the longest lunar-phase blackout
-lasts 8.5--15.7\,days. After a 3.2-day gap on the $L_1$ halo, the extended Kalman filter reacquires
-consistently in 25\,\% of 100 runs, against 99\,\% for a Gaussian-mixture unscented filter. The
+lasts 8.5--15.7\,days. After a 3-day gap on the $L_1$ halo, the extended Kalman filter reacquires
+consistently in 37\,\% of 100 runs, against 100\,\% for a Gaussian-mixture unscented filter. The
 operator horizon equals that of an idealised search centred on the true mean (median ratio 1.00). The
 near-rectilinear and distant retrograde orbits stay in custody beyond 30\,days after three or more
 days of tracking, whereas the unstable $L_1$ and $L_2$ orbits are lost after 11--17\,days (median,
 ten fields), depending mainly on the tracking-arc length. Across 30 members of five families, the
 horizon falls with the stability index (Spearman $\rho = -0.92$ above index 10). Individual horizons
-are predicted by the unscented-transform covariance, not by the finite-time Lyapunov exponent. Linear
-propagation gives false custody on the $L_1$ halo after about 10\,days. The main conclusions are
-reproduced for 60 cases in a DE440 ephemeris model with solar radiation pressure.}
+are predicted by the unscented-transform covariance, not by the finite-time Lyapunov exponent. Site biases and
+solar-pressure errors shorten the horizons by about 1\,\% at nominal levels but make covariance-based
+custody claims overconfident. The main conclusions are reproduced for 60 cases in a DE440 ephemeris model with solar radiation pressure.}
 
 \keywords{Cislunar space domain awareness, Angles-only orbit determination, Near-rectilinear halo orbit,
 Uncertainty propagation, Gaussian mixture filter, Custody}
@@ -94,6 +93,9 @@ simulation study. Its contributions are:
 \item A sweep over 30 members of five orbit families, showing that nearly stable members keep custody
       beyond 30\,days and that, above a stability index of 10, the horizon falls with the index
       (Section~\ref{sec:families}).
+\item A consider-covariance analysis with site biases, clock offsets and solar-pressure errors,
+      showing that the horizons are robust to these errors but that custody claims based on the
+      Cram\'er--Rao covariance are not (Section~\ref{sec:consider}).
 \end{enumerate}
 
 %=====================================================================
@@ -183,7 +185,8 @@ distance. The limiting magnitude is degraded by scattered moonlight following Kr
 Schaefer~\cite{krisciunas1991}, and atmospheric extinction is applied. Dark-sky limiting magnitudes
 of 19.5, 21.5 and 23.0 are assumed for 0.36, 1 and 2\,m apertures; the 0.36\,m value is anchored to
 the CAPSTONE detection of Sechrest et al.~\cite{sechrest2024}. Measurements are topocentric right
-ascension and declination with 1$''$ noise, every 10\,min per site when the target is visible.
+ascension and declination with 1$''$ noise in each axis on the sky (isotropic, so the
+right-ascension noise is $1''/\cos\delta$), every 10\,min per site when the target is visible.
 
 \subsection{Estimators}\label{sec:estimators}
 Four filters share one measurement model:
@@ -246,7 +249,7 @@ passage (every 6.56\,d), when the along-track uncertainty is stretched as the ob
 the Moon, and then shrinks again. The horizon is interpolated between grid points in log--log
 coordinates. For 17
 representative arcs, refining the grid to a uniform 0.02-d step changes $\Tc$ by a median of at
-most 0.02\,d, by at most 0.15\,d for $N = 1$ and 10, and by at most 0.6\,d for $N = 100$.
+most 0.03\,d, by at most 0.15\,d for $N = 1$ and 10, and by at most 0.17\,d for $N = 100$.
 
 The post-fit covariance at the gap start is the Cram\'er--Rao lower bound (CRLB) of the preceding
 tracking arc of 1, 3 or 7\,days:
@@ -256,11 +259,12 @@ P_0 = \Phi(t_e,t_0)\,\mathcal I^{-1}\,\Phi(t_e,t_0)^\top ,
 \end{equation}
 built from the actual visible measurements, with the gap starting at the arc's last measurement
 $t_e$. Here $H_k$ is the Jacobian of right ascension and declination, $R$ the measurement noise
-covariance, and $\Lambda_0$ a weak regularising prior ($10^5$\,km, 1\,km\,s$^{-1}$). An arc is
+covariance ($\mathrm{diag}(\sigma^2/\cos^2\delta_k, \sigma^2)$ with $\sigma = 1''$, the same model as in the
+simulated measurements and the filters), and $\Lambda_0$ a weak regularising prior ($10^5$\,km, 1\,km\,s$^{-1}$). An arc is
 counted as observable when the resulting position bound is finite and below this prior.
 Section~\ref{sec:filters} shows that the filters reach this bound in tracking. Two scenarios are
 studied: arcs ending every 15\,days through the year (\emph{phase}), and arcs ending exactly when a
-blackout of 2\,days or more begins (\emph{blackout}). Together they give 525 cases, of which 394 are
+blackout of 2\,days or more begins (\emph{blackout}). Together they give 523 cases, of which 393 are
 distinct arcs: a phase arc often ends exactly where a blackout begins, and then appears in both
 scenarios. Statistics pooled over both scenarios use each distinct arc once.
 
@@ -335,11 +339,11 @@ Lyapunov, \textbf{d} DRO}\label{fig:gaps}
 \subsection{Cram\'er--Rao bounds}
 Figure~\ref{fig:crlb} shows the bound, computed from the actual measurement schedule, for arcs
 starting every 2\,days. At the end of 7-day arcs the median worst-direction position uncertainty
-is 1.12\,km (NRHO), 1.74\,km ($L_1$ halo), 6.87\,km (DRO) and 17.1\,km ($L_2$ Lyapunov), and the
-median velocity uncertainty is 6--101\,mm\,s$^{-1}$. Between 75\,\% and 84\,\% of 7-day arcs are
-observable. For the DRO and the Lyapunov orbit, the weakest direction lies within 6.6--7.8$^\circ$
+is 1.14\,km (NRHO), 1.83\,km ($L_1$ halo), 7.03\,km (DRO) and 17.8\,km ($L_2$ Lyapunov), and the
+median velocity uncertainty is 6--108\,mm\,s$^{-1}$. Between 75\,\% and 84\,\% of 7-day arcs are
+observable. For the DRO and the Lyapunov orbit, the weakest direction lies within 6.4--7.8$^\circ$
 (median) of the line of sight, that is, it is essentially range. For the NRHO and the halo it lies
-further from the line of sight (median 12.7--18.3$^\circ$), because the strongly curved dynamics
+further from the line of sight (median 12.8--17.9$^\circ$), because the strongly curved dynamics
 over a week also constrain range. Arcs that end inside a blackout show the uncertainty growth that
 motivates the rest of the paper.
 
@@ -356,30 +360,31 @@ observable}\label{fig:crlb}
 When the filters are started at the first measurement of the arc from a 1000\,km /
 10\,m\,s$^{-1}$ ($1\sigma$) prior, both the EKF and the UKF converge to the bound
 (Table~\ref{tab:filters}, 20 Monte Carlo runs per orbit). The averaged NEES (ANEES, ideal value 6)
-lies inside the 95\,\% band for 20 runs (4.58--7.61) for the $L_2$ Lyapunov orbit and the DRO. It
-lies outside the 95\,\% band for the NRHO, where 4.4--4.5 is conservative because the filters carry
-process noise that the truth lacks, and for the $L_1$ halo, where both filters are slightly
-overconfident (7.7 for the UKF, 9.1 for the EKF).
+lies inside the 95\,\% band for 20 runs (4.58--7.61) for every orbit and both filters except the EKF
+on the $L_2$ Lyapunov orbit, which is overconfident (9.25); the UKF on the same arc is consistent
+(6.05).
 
 \subsection{Reacquisition after a gap}
-In the $L_1$ halo arc the first measurement arrives 3.2\,d after the prior epoch. By then the
-1000\,km prior has stretched into a cloud whose 1--99\,\% extent is about
-$31\,000 \times 10\,000$\,km (Fig.~\ref{fig:cloud}). Over 100 runs, only 25\,\% of EKF runs end
-consistent (95\,\% Wilson interval 18--34\,\%), with errors of up to 562\,km while the filter claims
-about 2\,km. The UKF reaches 55\,\% (45--64\,\%), the PF with UKF handover 91\,\% (84--95\,\%), and
-the GM-UKF 99\,\% (95--100\,\%) (Table~\ref{tab:filters}, Fig.~\ref{fig:reacq}). The GM-UKF splits
-into up to 27 components along the stretching direction, averaging 3.1 components over the arc.
-All differences between the GM-UKF and the other three filters are significant (Fisher exact test,
-$p \le 0.02$). On the other three orbits, whose initial gaps are shorter, the EKF, UKF and GM-UKF
-end consistent in 99--100\,\% of runs, while a few PF runs lose the target at the handover
-(96--98\,\% consistent). The single-Gaussian 99\,\% ellipsoids still
-contain 96--98\,\% of the particles at the first measurement. At this gap length the EKF therefore
-fails mainly in the \emph{measurement update}, which linearises the angles across a $10^4$\,km
-cloud, rather than in the prediction.
+Reacquisition is tested on a separate 7-day arc per orbit that starts at the onset of the observation
+gap closest to 3\,days, with the prior placed at the arc start. In the $L_1$ halo arc the first
+measurement arrives 3.0\,d after the prior epoch. By then the 1000\,km prior has stretched into a
+cloud whose 1--99\,\% extent is about $42\,000 \times 7600$\,km (Fig.~\ref{fig:cloud}). Over 100 runs,
+only 37\,\% of EKF runs end consistent (95\,\% Wilson interval 28--47\,\%), with errors of up to
+1793\,km while the filter claims about 36\,km. The UKF reaches 77\,\% (68--84\,\%), the PF with UKF
+handover 88\,\% (80--93\,\%), and the GM-UKF 100\,\% (96--100\,\%) (Table~\ref{tab:filters},
+Fig.~\ref{fig:reacq}). The GM-UKF splits into up to 27 components along the stretching direction,
+averaging 3.0 components over the arc. All differences between the GM-UKF and the other three filters
+are significant (Fisher exact test, $p \le 0.02$). On the other three orbits, with gaps of
+1.9--3.2\,d, the UKF and the GM-UKF end consistent in 94--99\,\% of runs, the PF$\to$UKF in
+91--95\,\% and the EKF in only 60--85\,\%. At the first measurement on the $L_1$ halo, the EKF's
+99\,\% ellipsoid contains only 73\,\% of the particles, against 94\,\% for the UKF and 96\,\% for
+the GM-UKF. After a 3-day gap the linear \emph{prediction} therefore already misses part of the
+probability mass, and the measurement update, which linearises the angles across a $10^4$\,km cloud,
+adds to the error.
 
 \begin{table}[t]
 \caption{Filter performance on 7-day arcs. Tracking: 20 runs, prior at the first measurement.
-Reacquisition ($L_1$ halo, 3.2\,d initial gap): 100 runs, prior at the arc start; brackets give
+Reacquisition ($L_1$ halo, arc starting at a 3.0\,d observation gap): 100 runs, prior at the arc start; brackets give
 95\,\% Wilson intervals; run times are wall-clock values on a laptop and machine dependent; the PF values vary slightly between platforms because resampling amplifies rounding differences. CRLB
 and errors are position values in km (errors: RMS for tracking, median and maximum for
 reacquisition). ``Consistent'' means the final NEES is below $\chi^2_{0.99}(6)$}\label{tab:filters}
@@ -389,18 +394,18 @@ reacquisition). ``Consistent'' means the final NEES is below $\chi^2_{0.99}(6)$}
 \multicolumn{6}{l}{\emph{Tracking}}\\
 Orbit & CRLB & EKF error & EKF ANEES & UKF error & UKF ANEES\\
 \midrule
-9:2 NRHO       & 1.13  & 1.10  & 4.51 & 1.08  & 4.40\\
-$L_1$ halo     & 1.74  & 2.33  & 9.12 & 2.10  & 7.66\\
-$L_2$ Lyapunov & 17.60 & 15.25 & 6.35 & 15.15 & 6.31\\
-DRO            & 6.95  & 6.88  & 6.23 & 6.93  & 6.25\\
+9:2 NRHO       & 1.16  & 1.58  & 5.13 & 1.58  & 5.14\\
+$L_1$ halo     & 1.83  & 1.94  & 5.71 & 1.97  & 5.36\\
+$L_2$ Lyapunov & 17.88 & 9.60  & 9.25 & 9.50  & 6.05\\
+DRO            & 7.16  & 6.05  & 5.13 & 6.15  & 5.15\\
 \midrule
 \multicolumn{6}{l}{\emph{Reacquisition, $L_1$ halo}}\\
 Filter & Consistent & Median error & Max error & ANEES & Time [s]\\
 \midrule
-EKF         & 25\,\% (18--34)  & 12.6 & 561.8 & $7.5\times10^3$ & 0.1\\
-UKF         & 55\,\% (45--64)  & 3.82 & 241.9 & $1.0\times10^3$ & 0.1\\
-GM-UKF      & 99\,\% (95--100) & 1.50 & 4.2   & 7.0             & 0.2\\
-PF$\to$UKF  & 91\,\% (84--95)  & 1.5  & 18.5  & 21.2            & 0.2\\
+EKF         & 37\,\% (28--47)  & 68.0 & 1792.7 & $3.4\times10^3$ & 0.04\\
+UKF         & 77\,\% (68--84)  & 31.0 & 251.5  & 64.0            & 0.06\\
+GM-UKF      & 100\,\% (96--100) & 24.3 & 95.4  & 5.9             & 0.11\\
+PF$\to$UKF  & 88\,\% (80--93)  & 27.6 & 1546.9 & $1.3\times10^3$ & 0.19\\
 \botrule
 \end{tabular}
 \end{table}
@@ -408,7 +413,7 @@ PF$\to$UKF  & 91\,\% (84--95)  & 1.5  & 18.5  & 21.2            & 0.2\\
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{Fig6}
-\caption{$L_1$ halo: predicted uncertainty at the first measurement after the 3.2-day initial gap
+\caption{$L_1$ halo: predicted uncertainty at the first measurement after the 3.0-day initial gap
 (run 0), relative to the truth, in the \textbf{a} $xy$, \textbf{b} $xz$ and \textbf{c} $yz$
 synodic planes. Grey dots are PF particles; EKF and UKF $3\sigma$ ellipses and GM-UKF components
 ($1\sigma$) are shown}\label{fig:cloud}
@@ -428,15 +433,15 @@ bars are 95\,\% Wilson intervals}\label{fig:reacq}
 Figure~\ref{fig:growth} shows how the true 99\,\% sky radius grows after 7-day arcs. The NRHO and
 DRO stay below 0.01$^\circ$ for 30 days (median), reflecting their near-stability. The $L_1$ halo
 and $L_2$ Lyapunov orbits grow roughly exponentially after about 5 days, and their median operator
-horizons after 7-day arcs lie at 13.9--19.1\,d for one to 100 fields. Because the growth is so steep,
-enlarging the search from 10 to 100 fields gains only 1.7--3.3 days (Table~\ref{tab:tc}). The
+horizons after 7-day arcs lie at 13.7--19.1\,d for one to 100 fields. Because the growth is so steep,
+enlarging the search from 10 to 100 fields gains only 1.7--3.9 days (Table~\ref{tab:tc}). The
 length of the tracking arc matters more: the $L_1$ halo's median horizon rises from 10.9 to
-16.5\,d (10 fields) as the arc grows from 1 to 7 days. Over all arcs, the unstable orbits' median
-horizons for a ten-field search lie at 10.9--17.4\,d.
+16.4\,d (10 fields) as the arc grows from 1 to 7 days. Over all arcs, the unstable orbits' median
+horizons for a ten-field search lie at 10.9--17.3\,d.
 
 The horizons in Tables~\ref{tab:tc} and~\ref{tab:blackout} are operator horizons: the search is
-centred on the UT-predicted direction. Over all 394 distinct arcs they agree with the ideal horizons
-(search centred on the true mean) to within 0.4\,d for $N \le 10$ and 0.9\,d for $N = 100$, with a
+centred on the UT-predicted direction. Over all 393 distinct arcs they agree with the ideal horizons
+(search centred on the true mean) to within 0.8\,d for $N \le 10$ and 1.5\,d for $N = 100$, with a
 median ratio 1.00 for all three search sizes. When custody is lost, the UT-predicted centre is
 therefore still much closer to the true mean than the search radius; custody ends because the
 distribution outgrows the search, not because the search is centred in the wrong place.
@@ -457,15 +462,15 @@ the gap start. ``$>$30'' means beyond the 30-day grid}\label{tab:tc}
 \toprule
 Orbit & Arc & $\sigma_0$ [km] & $N=1$ & $N=10$ & $N=100$\\
 \midrule
-9:2 NRHO       & 1\,d & 23.8 & $>$30 (5.3--$>$30) & $>$30 (18.4--$>$30) & $>$30\\
-               & 3, 7\,d & 3.9, 0.9 & $>$30 & $>$30 & $>$30\\
-$L_1$ halo     & 1\,d & 20.0 & 8.8 (5.5--9.9)   & 10.9 (7.3--12.4)  & 12.7 (9.6--13.7)\\
-               & 3\,d & 5.1  & 11.7 (8.0--12.5) & 13.2 (10.1--14.2) & 14.9 (13.4--17.3)\\
-               & 7\,d & 0.7  & 14.3 (13.0--15.3) & 16.5 (14.6--18.4) & 18.5 (16.4--20.0)\\
-$L_2$ Lyapunov & 1\,d & 30.2 & 9.5 (7.7--11.2)  & 12.5 (9.9--15.3)  & 15.8 (12.9--18.0)\\
-               & 3\,d & 15.5 & 10.3 (9.1--13.5) & 14.9 (11.2--16.6) & 18.0 (15.4--18.9)\\
-               & 7\,d & 7.0  & 13.9 (11.9--15.8) & 17.4 (15.5--18.6) & 19.1 (18.3--21.2)\\
-DRO            & 1\,d & 31.8 & $>$30 (7.8--$>$30) & $>$30 & $>$30\\
+9:2 NRHO       & 1\,d & 24.5 & $>$30 (5.3--$>$30) & $>$30 (18.4--$>$30) & $>$30\\
+               & 3, 7\,d & 4.1, 0.9 & $>$30 & $>$30 & $>$30\\
+$L_1$ halo     & 1\,d & 20.8 & 8.8 (5.5--9.9)   & 10.9 (7.3--12.2)  & 12.6 (9.5--13.7)\\
+               & 3\,d & 5.1  & 11.6 (7.9--12.4) & 13.2 (10.0--14.1) & 14.9 (13.4--17.1)\\
+               & 7\,d & 0.8  & 14.3 (13.0--15.3) & 16.4 (14.6--18.3) & 18.3 (16.3--19.9)\\
+$L_2$ Lyapunov & 1\,d & 33.5 & 9.4 (7.6--10.9)  & 12.3 (9.7--15.4)  & 16.2 (12.8--18.0)\\
+               & 3\,d & 16.2 & 10.3 (9.0--13.4) & 14.9 (11.2--16.4) & 18.0 (15.3--18.8)\\
+               & 7\,d & 7.4  & 13.7 (11.6--15.7) & 17.3 (15.4--18.3) & 19.1 (18.3--21.1)\\
+DRO            & 1\,d & 31.9 & $>$30 (7.8--$>$30) & $>$30 & $>$30\\
                & 3, 7\,d & 11.7, 1.4 & $>$30 & $>$30 & $>$30\\
 \botrule
 \end{tabular*}
@@ -475,7 +480,7 @@ DRO            & 1\,d & 31.8 & $>$30 (7.8--$>$30) & $>$30 & $>$30\\
 The operational question is whether custody survives the blackouts that actually occur.
 Figure~\ref{fig:blackout} and Table~\ref{tab:blackout} compare $\Tc$ with every blackout of 2 days
 or more in the year. After 7-day arcs, every blackout is survived with a ten-field search. After
-1-day arcs, 11--26\,\% of the blackouts are lost for the $L_1$ and $L_2$ targets, and 22\,\% for
+1-day arcs, 11--24\,\% of the blackouts are lost for the $L_1$ and $L_2$ targets, and 22\,\% for
 the NRHO, whose blackouts last about 10.5\,d. The number of blackouts per orbit is small (9--34),
 so the individual shares are uncertain by 10--30 percentage points (95\,\% Wilson intervals); the
 ordering by arc length, however, holds for every orbit.
@@ -483,7 +488,7 @@ ordering by arc length, however, holds for every orbit.
 \begin{table}[t]
 \caption{Blackouts ($\ge$2\,d) survived, that is, operator $\Tc \ge$ blackout length, by tracking-arc
 length; $n$ is the number of blackouts with an observable preceding arc. The ideal horizon gives
-identical shares}\label{tab:blackout}
+the same shares except in one cell ($L_1$ halo, 1-day arcs, $N = 1$: 63\,\%)}\label{tab:blackout}
 \begin{tabular*}{\textwidth}{@{\extracolsep\fill}llccccc}
 \toprule
 Orbit & Arc & $n$ & Median length & $N=1$ & $N=10$ & $N=100$\\
@@ -494,9 +499,9 @@ Orbit & Arc & $n$ & Median length & $N=1$ & $N=10$ & $N=100$\\
 $L_1$ halo     & 1\,d & 27 & 3.1\,d  & 67\,\% & 89\,\%  & 93\,\%\\
                & 3\,d & 27 & 3.1\,d  & 93\,\% & 96\,\%  & 96\,\%\\
                & 7\,d & 28 & 3.1\,d  & 100\,\% & 100\,\% & 100\,\%\\
-$L_2$ Lyapunov & 1\,d & 34 & 4.1\,d  & 65\,\% & 74\,\%  & 94\,\%\\
+$L_2$ Lyapunov & 1\,d & 33 & 4.1\,d  & 67\,\% & 76\,\%  & 94\,\%\\
                & 3\,d & 34 & 4.1\,d  & 79\,\% & 97\,\%  & 97\,\%\\
-               & 7\,d & 34 & 4.1\,d  & 91\,\% & 100\,\% & 100\,\%\\
+               & 7\,d & 34 & 4.1\,d  & 88\,\% & 100\,\% & 100\,\%\\
 DRO            & 1\,d & 13 & 11.3\,d & 46\,\% & 85\,\%  & 85\,\%\\
                & 3\,d & 13 & 11.3\,d & 100\,\% & 100\,\% & 100\,\%\\
                & 7\,d & 13 & 11.3\,d & 100\,\% & 100\,\% & 100\,\%\\
@@ -507,7 +512,7 @@ DRO            & 1\,d & 13 & 11.3\,d & 46\,\% & 85\,\%  & 85\,\%\\
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.5\textwidth]{Fig9}
-\caption{Ideal custody horizon (ten fields; the operator horizon differs by at most 0.4\,d) against
+\caption{Ideal custody horizon (ten fields; the operator horizon differs by at most 0.8\,d) against
 blackout length. Points above the diagonal survive
 the blackout; marker shape shows the tracking-arc length (open: 1 and 3 days, filled: 7 days)}\label{fig:blackout}
 \end{figure}
@@ -516,12 +521,12 @@ the blackout; marker shape shows the tracking-arc length (open: 1 and 3 days, fi
 \section{Predicting the Custody Horizon, and False Custody}\label{sec:predict}
 
 Can $\Tc$ be predicted without Monte Carlo? Figure~\ref{fig:predict} compares the Monte Carlo
-horizon with two cheap predictors, using the 251--269 distinct arcs (depending on the predictor and
+horizon with two cheap predictors, using the 250--270 distinct arcs (depending on the predictor and
 $N$) whose horizons are finite and below 30\,d; $R^2$ is computed on the logarithm of the horizon.
-The \emph{orbit-only} FTLE predictor fails, with log-$R^2$ between $-0.23$ and 0.04 for the three
+The \emph{orbit-only} FTLE predictor fails, with log-$R^2$ between $-0.25$ and 0.04 for the three
 search sizes. The \emph{covariance-based} predictors succeed: the UT predictor reaches
 log-$R^2 = 0.96$, 1.00 and 0.93 for $N = 1$, 10 and 100 (bootstrap 95\,\% intervals 0.87--1.00,
-0.99--1.00 and 0.85--0.98), and the linear predictor 0.96, 0.99 and 0.97. The FTLE measures stretching along the
+0.99--1.00 and 0.85--0.98), and the linear predictor 0.92, 0.99 and 0.97. The FTLE measures stretching along the
 flow's most unstable direction, but the post-fit covariance is highly anisotropic: angles-only data
 constrain some directions far better than others, and only the uncertain directions that project
 onto the sky matter for the search. Predicting custody requires the growth of the \emph{actual}
@@ -538,15 +543,15 @@ and \textbf{b} the horizon claimed by the UT-propagated covariance. The dashed l
 Linear prediction is adequate for short gaps but breaks down on unstable orbits
 (Fig.~\ref{fig:contain}). On the $L_1$ halo, the median linear containment first falls below 95\,\% at a gap
 of 9.5\,d; on the $L_2$ Lyapunov orbit it does so only at 18.6\,d. After 14 days, the $L_1$ halo's linear 99\,\% sky ellipse
-contains only 5.4\,\% of the true probability mass (median over all $L_1$ halo arcs), while the UT
+contains only 5.3\,\% of the true probability mass (median over all $L_1$ halo arcs), while the UT
 ellipse contains 98\,\%. A search sized and shaped by the linear ellipse would therefore miss most of
 the target's probability mass. The linear predicted centre, by contrast, generally stays close to the
 true mean, so the linear failure lies mainly in the predicted spread rather than the predicted position. The UT-centred search gave false custody at $N = 10$ (a claimed horizon
-more than 10\,\% longer than the actual one) in 2 of the 254 distinct arcs with a finite actual
+more than 10\,\% longer than the actual one) in 2 of the 253 distinct arcs with a finite actual
 horizon: an NRHO arc whose claim exceeds 30\,d while the UT-centred circle loses the target at
 18.4\,d, and an $L_2$ Lyapunov arc claimed to 11.6\,d but lost at 10.2\,d. On the unstable orbits,
 even the UT ellipse loses containment for long gaps: its median containment first falls below
-95\,\% at 18.6--19.5 days and reaches minima of 66--72\,\%. The recovery near 30 days is an artefact of the small-angle projection once the
+95\,\% at 18.6--19.5 days and reaches minima of 65--72\,\%. The recovery near 30 days is an artefact of the small-angle projection once the
 distribution covers tens of degrees, long after custody is lost.
 
 \begin{figure}[t]
@@ -569,21 +574,22 @@ STMs from the gravity-gradient variational equations. The $L_1$ halo, $L_2$ Lyap
 counterparts are continuous to better than 0.4\,m and stay within 3500--5200\,km (median) of their
 CR3BP shapes. The NRHO counterpart retains a continuity residual of 50--124\,km (median to
 maximum over windows), because the corrector stalls in the ill-conditioned perilune segments; this
-is a limitation of the present corrector. For 60 custody cases (59 distinct arcs; blackout and
+is a limitation of the present corrector. For 60 custody cases (58 distinct arcs; blackout and
 phase scenarios, 1- and 7-day arcs), the CRLB covariance is mapped to inertial coordinates and propagated in the
 ephemeris model.
 
 The conclusions carry over (Figs.~\ref{fig:ephem} and~\ref{fig:ephemgrowth},
-Table~\ref{tab:ephem}). The median ratio of ephemeris to CR3BP horizon is 0.93--1.01, and the
-growth curves overlap. In 6 of the 59 distinct arcs, local differences in the ephemeris dynamics
+Table~\ref{tab:ephem}). The median ratio of ephemeris to CR3BP horizon is 0.93--1.00, and the
+growth curves overlap. In 5 of the 58 distinct arcs, local differences in the ephemeris dynamics
 shift $\Tc$ by more than 3 days or across the 30-day limit. Blackout survival is
-unchanged except for two single-case differences within four-case groups. The UT predictor again
-reaches log-$R^2 = 1.00$ for $N = 10$, but 0.90 for $N = 1$ (42 finite cases, bootstrap interval
-0.59--1.00) and 0.80 for $N = 100$ (30 finite cases, bootstrap interval 0.55--0.99): at a search
-radius of 5.6$^\circ$ the distribution is too curved for any single Gaussian. Linear false custody
+unchanged except for one single-case difference in a four-case group ($L_1$ halo, 1-day arcs). The UT
+predictor again reaches log-$R^2 = 1.00$ for $N = 10$, but only 0.80 for $N = 1$ (41 finite cases,
+bootstrap interval 0.37--1.00) and 0.83 for $N = 100$ (30 finite cases, bootstrap interval 0.58--0.99).
+With so few finite cases these two values are uncertain; at a search radius of 5.6$^\circ$, moreover,
+the distribution is too curved for any single Gaussian. Linear false custody
 persists, and on the $L_2$ Lyapunov orbit it becomes \emph{worse}. At 14 days the linear ellipse
-holds 12.6\,\% of the mass for the $L_1$ halo (10.3\,\% for the same arcs in the CR3BP) and 84.8\,\%
-for the $L_2$ Lyapunov orbit (98.6\,\% in the CR3BP), while the UT ellipse holds 98--99\,\%.
+holds 12.0\,\% of the mass for the $L_1$ halo (9.9\,\% for the same arcs in the CR3BP) and 79.9\,\%
+for the $L_2$ Lyapunov orbit (98.7\,\% in the CR3BP), while the UT ellipse holds 98--99\,\%.
 
 \begin{table}[t]
 \caption{Ephemeris (DE440 + solar radiation pressure) versus CR3BP: median custody horizon (ten
@@ -594,11 +600,11 @@ Orbit & Arc & $n$ & CR3BP $\Tc$ & Ephemeris $\Tc$ & Ratio\\
 \midrule
 9:2 NRHO       & 1\,d & 8  & $>$30\,d & 28.3\,d  & 0.98\\
                & 7\,d & 7  & $>$30\,d & $>$30\,d & ---\\
-$L_1$ halo     & 1\,d & 4  & 8.5\,d   & 7.8\,d   & 0.93\\
-               & 7\,d & 11 & 15.9\,d  & 15.9\,d  & 1.01\\
-$L_2$ Lyapunov & 1\,d & 6  & 12.5\,d  & 11.3\,d  & 0.94\\
-               & 7\,d & 9  & 15.9\,d  & 16.3\,d  & 0.99\\
-DRO            & 1\,d & 6  & $>$30\,d & $>$30\,d & 0.99\\
+$L_1$ halo     & 1\,d & 4  & 8.4\,d   & 7.8\,d   & 0.93\\
+               & 7\,d & 11 & 15.9\,d  & 15.8\,d  & 1.00\\
+$L_2$ Lyapunov & 1\,d & 5  & 11.9\,d  & 11.3\,d  & 0.95\\
+               & 7\,d & 10 & 15.8\,d  & 16.4\,d  & 1.00\\
+DRO            & 1\,d & 6  & $>$30\,d & $>$30\,d & 1.00\\
                & 7\,d & 9  & $>$30\,d & $>$30\,d & ---\\
 \botrule
 \end{tabular*}
@@ -636,14 +642,14 @@ its monodromy matrix; $\nu = 1$ means linearly stable.
 \subsection{Stability index}
 Figure~\ref{fig:stability} shows the operator horizon against $\nu$. After 7-day arcs, all 15 members
 with $\nu < 3$ (every DRO, six of the seven $L_2$ halo and NRHO members and four $L_1$ halo members)
-keep custody beyond 30\,d (member median). After 3-day arcs all but one of them do; the exception is an
-$L_1$ halo member with $\nu = 2.9$, lost at 27.0\,d. Above $\nu = 10$ the horizon falls as $\nu$ grows:
-after 7-day arcs the finite member medians span 13.0--25.2\,d, and two $L_1$ Lyapunov members
+keep custody beyond 30\,d (member median). After 3-day arcs all but two of them do; the exceptions are
+two $L_1$ halo members with $\nu = 2.4$ and 2.9, lost at 29.1 and 26.9\,d. Above $\nu = 10$ the horizon falls as $\nu$ grows:
+after 7-day arcs the finite member medians span 12.9--25.2\,d, and two $L_1$ Lyapunov members
 ($\nu = 71$ and 113) stay beyond 30\,d. For the 15 members with $\nu > 10$, the Spearman rank
 correlation between the member median horizon and $\log\nu$ is $\rho = -0.92$ (3-day arcs) and
 $-0.91$ (7-day arcs), both with $p < 10^{-5}$; horizons beyond 30\,d enter as ties at 30\,d.
 Including the nearly stable members (all 25 members with $\nu > 1.01$; the DROs have $\nu = 1.00$)
-gives $-0.96$ and $-0.91$.
+gives $-0.97$ and $-0.91$.
 
 Within families, the correlation is strong for the $L_1$ halo and both Lyapunov families ($\rho$
 between $-0.91$ and $-1.00$ for both arc lengths, with five to seven members each). The $L_2$ halo
@@ -669,8 +675,8 @@ arrow. Open markers: Lyapunov families and members beyond 30\,d}\label{fig:stabi
 \end{figure}
 
 \subsection{Operator and strip searches}
-Over all 413 cases, the operator horizon differs from the ideal one by at most 0.34\,d for $N = 1$,
-0.19\,d for $N = 10$ and 1.15\,d for $N = 100$, and the median ratio of the two is 1.00 for all three
+Over all 413 cases, the operator horizon differs from the ideal one by at most 0.17\,d for $N = 1$,
+0.38\,d for $N = 10$ and 1.18\,d for $N = 100$, and the median ratio of the two is 1.00 for all three
 search sizes (Fig.~\ref{fig:opideal}a). The result of Section~\ref{sec:custody} therefore holds across
 the families: centring the search on the unscented prediction costs no custody time.
 
@@ -678,10 +684,10 @@ An operator can also exploit the elongation of the predicted uncertainty by layi
 as a strip along the major axis of the UT-predicted sky ellipse, with the aspect ratio of the ellipse,
 at most 10$^\circ$ long, and taking the worst of orientation errors of $\pm2^\circ$. Relative to the
 ideal circle, the median horizon of this strip is 0.97, 1.08 and 0.98 for $N = 1$, 10 and 100
-(Fig.~\ref{fig:opideal}b). At $N = 10$, the strip gains more than 3\,d in 52 of the 204 cases with a
-finite ideal horizon, 48 of them on the Lyapunov families. These are the cases whose true distribution
+(Fig.~\ref{fig:opideal}b). At $N = 10$, the strip gains more than 3\,d in 54 of the 206 cases with a
+finite ideal horizon, 49 of them on the Lyapunov families. These are the cases whose true distribution
 is thinnest across the strip: where the circle loses custody, the 99\,\% cross-track half-width of the
-distribution is 0.5$''$ (median), against 1.4$''$ for the other cases. Such thin distributions follow
+distribution is 0.6$''$ (median), against 1.5$''$ for the other cases. Such thin distributions follow
 from a Cram\'er--Rao covariance without measurement biases, timing errors or force-model errors. The
 strip gain is therefore reported as a possible improvement that remains to be confirmed with a more
 realistic covariance, not as a result.
@@ -695,10 +701,73 @@ Horizons beyond 30\,d are plotted at 35\,d; the dashed line is equality}\label{f
 \end{figure}
 
 %=====================================================================
+\section{Robustness to Unmodelled Errors}\label{sec:consider}
+
+The horizons so far start from the Cram\'er--Rao bound, which assumes that white measurement noise is
+the only error. Real astrometry also has errors that do not average down with the number of
+measurements. They are added here as consider parameters~\cite{tapley2004}: quantities that the
+estimator does not solve for, but whose uncertainty enters the error of its estimate. The measurements
+become $\vect z_k = h(\vect x_k) + \vect b_s + \vect b_c + \vect v_k$, with a constant angle bias
+$\vect b_s$ per site and sky axis, a common bias $\vect b_c$ shared by all sites (for example catalogue
+zonal errors or a common reduction pipeline), and a constant clock offset per site. The dynamics get an
+error in the area-to-mass ratio $A/m$ of a cannonball solar radiation pressure model ($C_r = 1.3$),
+which acts during the arc and keeps acting during the gap. Two cases are distinguished: the operator
+models solar radiation pressure but $A/m$ is uncertain by 30\,\% (for $A/m$ from 0.005 to
+0.05\,m$^2$\,kg$^{-1}$), or the operator does not model it at all, so that the truth carries the full
+$A/m$. With $S$ the sensitivity of the least-squares estimate to the consider parameters, mapped to the
+arc end, and $C$ their covariance, the arc-end covariance becomes
+$P = P_{\mathrm{CRLB}} + S C S^\top$. This covariance, together with the solar-pressure error during the
+gap, defines the Monte Carlo truth; the operator still plans with the Cram\'er--Rao covariance and the
+unperturbed CR3BP, as in Section~\ref{sec:custody}. The nominal case combines a 0.1$''$ bias per site, a
+1\,ms clock offset and $A/m = 0.01 \pm 30\,\%$; the conservative case combines 0.5$''$ per site, a
+0.1$''$ common bias, 10\,ms and $A/m = 0.05 \pm 30\,\%$. Both are also run with 0.3$''$ instead of 1$''$
+white noise. The study uses the phase arcs every 30\,days (126 arcs of 1, 3 and 7\,days); without the
+additional errors it reproduces the horizons of Section~\ref{sec:custody} exactly.
+
+The horizons hold (Fig.~\ref{fig:consider}). For a ten-field search and the 67 arcs whose reference
+horizon is below 30\,d, the nominal errors shorten the operator horizon by a median of 1\,\% (ratio
+0.99, 10th percentile 0.96). A per-site bias costs little up to 0.2$''$ (ratio 0.99) and 5\,\% at 0.5$''$
+(ratio 0.95, with 5 arcs losing more than 20\,\%). A common bias matters less than independent site
+biases, and clock offsets have no effect: the targets move across the sky at a median of
+0.4$''$\,s$^{-1}$ and, in 95\,\% of the measurements, at less than 0.7$''$\,s$^{-1}$, so 10\,ms shifts
+them by a few milliarcseconds. With solar radiation pressure modelled, the median ratio stays
+at 0.98--1.00 up to $A/m = 0.05$\,m$^2$\,kg$^{-1}$, although the 10th percentile falls to 0.82. Not
+modelling solar radiation pressure at all is the largest single effect: at $A/m = 0.05$\,m$^2$\,kg$^{-1}$
+the median ratio is 0.94 and 8 arcs lose more than 20\,\%. It is also the only error that moves the
+centre of the search: the truth drifts away from the prediction, so the operator horizon falls while the
+ideal horizon hardly changes (ratio 0.99). The conservative case gives a median ratio of 0.93 (10th
+percentile 0.71, 13 arcs losing more than 20\,\%). The near-stable orbits are barely affected: at most
+2 of the 28 NRHO arcs fall below 30\,d, and no DRO arc does.
+
+Systematic errors matter more when the white noise is smaller. With 0.3$''$ noise the horizons
+themselves are longer, by a median of 1.8\,d, but the nominal errors then cost 4\,\% (ratio 0.96) and the
+conservative errors 19\,\% (ratio 0.81, with 46\,\% of the arcs losing more than 20\,\%), because the
+biases dominate the post-fit covariance.
+
+What does not hold is the Cram\'er--Rao claim. An operator who sizes the search from the Cram\'er--Rao
+covariance claims a horizon more than 10\,\% longer than the actual one in 1.5\,\% of the arcs without
+the additional errors, in 9\,\% under the nominal errors, in 34\,\% with 0.5$''$ site biases, and in
+82\,\% for the conservative errors with 0.3$''$ noise. The search should therefore be sized from a
+covariance inflated for these errors, such as the consider covariance used here.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{Fig16}
+\caption{Effect of unmodelled errors on custody: \textbf{a} starting uncertainty relative to the
+Cram\'er--Rao reference (largest $1\sigma$ position axis), \textbf{b} operator horizon (ten fields)
+relative to the reference for the arcs whose reference horizon is below 30\,d. Markers are medians and
+lines 10--90\,\% ranges. Configurations: per-site bias, common bias, clock offset, solar radiation
+pressure modelled with $A/m$ uncertain by 30\,\%, solar radiation pressure not modelled, and the
+nominal and conservative combinations, the last two also with 0.3$''$ white noise (reference: the
+0.3$''$ Cram\'er--Rao bound). An unmodelled force shifts the mean rather than widening the covariance,
+so its value in \textbf{a} is 1. The dashed line marks a 20\,\% loss}\label{fig:consider}
+\end{figure}
+
+%=====================================================================
 \section{Discussion}\label{sec:discussion}
 
 \subsection{Operational implications}
-Five rules follow from the results.
+Six rules follow from the results.
 \begin{enumerate}
 \item Sensor design for cislunar tracking from the ground should minimise the usable
       Moon-exclusion angle (baffling, scattered-light rejection) before increasing aperture.
@@ -712,6 +781,10 @@ Five rules follow from the results.
       as much as a UKF; it was the only filter to end consistent in at least 99\,\% of the $L_1$ halo reacquisition runs.
 \item On the NRHO, a narrow (single-field) search should be scheduled away from perilune, where the
       sky-plane uncertainty briefly swells before shrinking again (Section~\ref{sec:custody-def}).
+\item The search size should come from a covariance inflated for site biases and solar-pressure
+      errors, not from the Cram\'er--Rao bound: the horizons are robust to these errors, but
+      Cram\'er--Rao claims of custody become false in a third of the arcs once site biases reach
+      0.5$''$ (Section~\ref{sec:consider}). Solar radiation pressure should be modelled.
 \end{enumerate}
 Because the operator horizon matches the ideal one, these horizons are achievable by an operator who
 centres the search on a UKF prediction. The stability index gives a first screening of a catalogue: in
@@ -724,9 +797,10 @@ evaluated inside a tasking scheduler for every catalogued object at negligible c
 \begin{itemize}
 \item This is a simulation study; no real observations are processed.
 \item The post-fit covariance is the Cram\'er--Rao bound, which the filters reach in tracking but
-      not always immediately after a gap. It contains no measurement biases, timing errors or
-      force-model errors; the very thin distributions behind the strip gains of
-      Section~\ref{sec:families} depend on this.
+      not always immediately after a gap. Section~\ref{sec:consider} adds site biases, clock offsets
+      and solar-pressure errors for 126 arcs of the four representative orbits; the family sweep and
+      the strip gains of Section~\ref{sec:families}, which rest on very thin distributions, were not
+      re-tested with them.
 \item Sensor parameters (limiting magnitudes, extinction, dark-sky brightness) are nominal. The
       moonlight model of Krisciunas and Schaefer~\cite{krisciunas1991} is extrapolated below
       10$^\circ$ from the Moon, and the exclusion angle stands in for instrument-specific scattered
@@ -734,12 +808,12 @@ evaluated inside a tasking scheduler for every catalogued object at negligible c
 \item Targets are passive, non-manoeuvring spheres of 2\,m diameter, and data association and
       clutter are not modelled.
 \item Each 99\,\% quantile is estimated from 300 samples. Re-running 17 representative arcs with
-      2000 samples changes $\Tc$ by a median of 0.09--0.14\,d (1--2\,\%) and by at most 0.9\,d for
+      2000 samples changes $\Tc$ by a median of 0.08--0.13\,d (1--2\,\%) and by at most 0.7\,d for
       $N = 10$ and 100. At $N = 1$, one NRHO arc whose 99\,\% radius only just reaches the search
       radius during a perilune passage moves from 5.3 to 17.6\,d.
 \item The NRHO ephemeris counterpart is not fully continuous.
 \item The CR3BP study places orbits in the real Earth--Moon direction with analytic ephemerides, and
-      the DE440 check covers 60 of the 525 cases.
+      the DE440 check covers 60 of the 523 cases.
 \end{itemize}
 
 \subsection{Future work}
@@ -766,8 +840,11 @@ nearly stable members keep custody beyond 30 days and, above a stability index o
 with the index (Spearman $\rho = -0.92$ and $-0.91$ for 3- and 7-day arcs). The horizon after an
 individual arc is predicted closely by the unscented transform of the post-fit covariance, but not by
 the orbit's FTLE alone, and linear prediction gives false custody on unstable orbits after long gaps.
-After a 3.2-day gap on the $L_1$ halo, a Gaussian-mixture UKF reacquired in 99\,\% of runs, against
-25\,\% for the EKF and 55\,\% for the UKF. The main conclusions are reproduced, for 60 of the 525 cases,
+Realistic site biases, clock offsets and solar-pressure errors shorten the horizons by about 1\,\% at
+nominal levels and by 7\,\% (median) in a conservative case, but make custody claims based on the
+Cram\'er--Rao covariance overconfident, so the search should be sized from an inflated covariance.
+After a 3-day gap on the $L_1$ halo, a Gaussian-mixture UKF reacquired in all 100 runs, against
+37\,\% for the EKF and 77\,\% for the UKF. The main conclusions are reproduced, for 60 of the 523 cases,
 in a DE440 ephemeris model with solar radiation pressure.
 
 %=====================================================================

@@ -1,7 +1,8 @@
 """Milestone 5: reacquisition after an observation gap with EKF, UKF, GM-UKF and PF.
 
-Same 7-day arcs as milestone 4, 'reacquire' mode: the prior (1000 km, 10 m/s) sits at
-the arc start and is propagated across the gap before the first measurement.
+Same reacquisition arcs as milestone 4 (filter_study.pick_reacq_arcs: each 7-day arc starts at the
+onset of the observation gap closest to REACQ_GAP_D = 3 days): the prior (1000 km, 10 m/s) sits at the
+arc start and is propagated across that gap before the first measurement.
 
     python scripts/nonlinear_filter_study.py                  # 100 runs, 3000 particles
     python scripts/nonlinear_filter_study.py --runs 10        # quick look
@@ -25,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 from visibility_study import representative_orbits, EPOCH  # noqa: E402
-from filter_study import pick_arcs, ARC_D, SIG0_POS_KM, SIG0_VEL_MS, SIGMA, Q_PSD  # noqa: E402
+from filter_study import pick_reacq_arcs, ARC_D, SIG0_POS_KM, SIG0_VEL_MS, SIGMA, Q_PSD  # noqa: E402
 from cislunar_custody.constants import MU_EM, LU_KM, VU_KMS, TU_DAYS  # noqa: E402
 from cislunar_custody.filters import (AnglesModel, EKF, UKF, GMUKF, ParticleFilter,  # noqa: E402
                                       to_physical_sigma)
@@ -62,11 +63,11 @@ def main(n_runs, n_particles):
     P0 = np.diag([(SIG0_POS_KM / LU_KM) ** 2] * 3 + [(SIG0_VEL_MS * 1e-3 / VU_KMS) ** 2] * 3)
     L0 = np.linalg.cholesky(P0)
     model = AnglesModel(MU_EM, SIGMA)
-    arcs = pick_arcs()
+    arcs = pick_reacq_arcs()
     summary, clouds = [], {}
     c99 = chi2.ppf(0.99, 6)
     for oname, orb in representative_orbits().items():
-        d0, crlb_km = arcs[oname]
+        d0, _, crlb_km = arcs[oname]
         res = {k: [] for k in NAMES}
         wall = {k: 0.0 for k in NAMES}
         for i in range(n_runs):

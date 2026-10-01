@@ -8,7 +8,7 @@ Target journal: *The Journal of the Astronautical Sciences* (Springer). Build th
 
 - [x] Springer Nature template (`sn-jnl`), numbered references in square brackets (`sn-mathphys-num`).
 - [x] Title page: author, department, institute, city, postcode, country, e-mail, ORCID.
-- [x] Abstract of about 247 words (limit 150–250; recount after any edit). Abbreviations are spelled out.
+- [x] Abstract of about 248 words (limit 150–250; recount after any edit). Abbreviations are spelled out.
 - [x] Six keywords.
 - [x] At most three heading levels, all numbered.
 - [x] Declarations: funding, competing interests, data and code availability, author
@@ -16,7 +16,7 @@ Target journal: *The Journal of the Astronautical Sciences* (Springer). Build th
 - [x] References have DOIs where one exists. They were checked against Crossref and publisher
       pages. Jo et al. is updated to the 2026 *Astrodynamics* paper, and Iannamorelli & LeGrand to
       JAS 72(1) 2025.
-- [x] Figures are `figures/jas/Fig1…Fig15` (Fig14, Fig15 from `family_sweep.py --plots-only`), in vector PDF and 600 dpi TIFF:
+- [x] Figures are `figures/jas/Fig1…Fig16` (Fig14–15 from `family_sweep.py`, Fig16 from `consider_study.py`), in vector PDF and 600 dpi TIFF:
   - 84 or 174 mm wide, with Arial/Helvetica-type lettering of 8–12 pt;
   - no titles inside the figures; panels are labelled **a**, **b**, …;
   - orbits and filters are told apart by line style or marker as well as colour;
@@ -44,7 +44,7 @@ Target journal: *The Journal of the Astronautical Sciences* (Springer). Build th
 - [ ] **Cover letter.** Give the one-paragraph contribution, why the paper fits JAS, and a
       statement that it is not under consideration elsewhere.
 - [ ] **Editorial Manager.** Upload `main.tex`, `references.bib`, `sn-jnl.cls`,
-      `sn-mathphys-num.bst`, `Fig1–Fig15` (PDF or TIFF) and the compiled `main.pdf`.
+      `sn-mathphys-num.bst`, `Fig1–Fig16` (PDF or TIFF) and the compiled `main.pdf`.
 
 ## Evidence that is right but statistically thin (`verify_claims.py` shows WEAK)
 
@@ -57,6 +57,18 @@ Target journal: *The Journal of the Astronautical Sciences* (Springer). Build th
 | Ephemeris, L1 halo, 1-day arcs | only 4 cases | Table 5 column n |
 | L2 halo family: ρ = −0.61, p = 0.14 | 7 members, 6 of them beyond 30 d | Sec. 10.1 states it openly |
 | Strip gains (cross-track 0.5″ vs 1.4″) | rest on the CRLB covariance without biases | Sec. 10.2 and Limitations; milestone 9 re-tests |
+
+## Milestone 9 and the noise-model fix (this version)
+
+- Noise model: 1″ isotropic on the sky everywhere. The simulator already did this; the CRLB and the
+  filters used 1″ in right ascension itself. All CRLB-based numbers moved by about 1–3 % (Tables 2, 3, 5,
+  Sec. 6–10). The L1 tracking overconfidence (ANEES 9.1 / 7.7) disappeared; only the EKF on L2 is outside
+  the band now (9.25).
+- Reacquisition arcs are now chosen explicitly (start at the observation gap closest to 3 d); before, the
+  3.2-d gap came from whichever arc had the median CRLB. L1: EKF 37 %, UKF 77 %, PF→UKF 88 %, GM-UKF 100 %.
+- New Sec. 11 "Robustness to Unmodelled Errors" (consider covariance, Fig. 16, verifier claims C1–C11),
+  Discussion rule 6, contribution 6, abstract and conclusions sentences.
+- WEAK: L2 halo family ρ (FS4b), strip cross-track width (FS6g), predictor and ephemeris R² with wide CIs.
 
 ## Milestone 8 in the paper: operator horizon as the headline
 

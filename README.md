@@ -12,7 +12,7 @@ A computational study of NRHO, halo, Lyapunov and DRO orbits in the Earth–Moon
 ![SciPy](https://img.shields.io/badge/SciPy-ODE%20Solver-8CAAE6?logo=scipy&logoColor=white)
 ![Matplotlib](https://img.shields.io/badge/Matplotlib-Figures-11557c)
 ![JPL](https://img.shields.io/badge/Ephemeris-JPL%20DE440-0B3D91)
-![Tests](https://img.shields.io/badge/tests-52%20passing-2ea44f)
+![Tests](https://img.shields.io/badge/tests-59%20passing-2ea44f)
 ![CI](https://github.com/Bishwaswarup/cislunar-custody/actions/workflows/python-package.yml/badge.svg)
 ![Claims](https://img.shields.io/badge/paper%20claims-0%20FAIL-2ea44f)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
@@ -165,7 +165,8 @@ pytest                                    # 52 tests, ~15 s
 | 7 | `python scripts/ephemeris_check.py` | ~6 min | DE440 + SRP cross-check, fig16–17 |
 | 8 | `python scripts/sensitivity_check.py` | ~5 min | Monte Carlo sample-size check (300 vs 2000) and gap-grid check (37 vs 121 points vs uniform 0.02 d) |
 | 9 | `python scripts/family_sweep.py` | ~25 min | operator horizons across whole families vs stability index, fig18–19 (paper Fig. 14–15) |
-| 10 | `python scripts/verify_claims.py` | ~20 s | checks every number in `paper/main.tex` against `data/` (needs `family_sweep.csv`) |
+| 10 | `python scripts/consider_study.py` | ~20 min | site biases, clock offsets and SRP errors as consider parameters, fig20 (paper Fig. 16) |
+| 11 | `python scripts/verify_claims.py` | ~30 s | checks every number in `paper/main.tex` against `data/` (needs `family_sweep.csv`, `consider_cases.csv`) |
 
 Or run everything with `bash scripts/run_all.sh` (logs in `logs/`); `bash scripts/run_all.sh --check` only re-checks the paper.
 

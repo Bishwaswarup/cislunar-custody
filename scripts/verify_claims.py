@@ -34,7 +34,7 @@ DATA = ROOT / "data"
 
 ORB = {"NRHO": "NRHO 9:2", "L1": "L1 halo (Az~30k km)", "L2": "L2 Lyapunov (mid)", "DRO": "DRO (~70k km)"}
 RESULTS = []
-UT_MIN = (66, 72)      # paper: minima of the median UT containment curves (Sec 8)
+UT_MIN = (65, 72)      # paper: minima of the median UT containment curves (Sec 8)
 
 
 # ----------------------------------------------------------------------------- helpers
@@ -220,7 +220,7 @@ def claims_observability():
     a = load("observability_arcs.csv")
     if a is None:
         return skip(Claim("O", "Sec 6", "CRLB claims", None), "observability_arcs.csv")
-    paper = {"NRHO": 1.12, "L1": 1.74, "DRO": 6.87, "L2": 17.1}
+    paper = {"NRHO": 1.14, "L1": 1.83, "DRO": 7.03, "L2": 17.8}
     vel, frac, weak = [], [], {}
     for o, pv in paper.items():
         s = col(a, "sig_pos_max_km", orbit=ORB[o], arc_d=7.0)
@@ -230,12 +230,12 @@ def claims_observability():
         obs = [r["observable"] in (True, "True", 1.0) for r in a if r["orbit"] == ORB[o] and r["arc_d"] == 7.0]
         frac.append(100 * np.mean(obs))
         weak[o] = np.nanmedian(col(a, "weak_los_deg", orbit=ORB[o], arc_d=7.0))
-    check_range(Claim("O2", "Sec 6", "median velocity CRLB, 7-d arcs [mm/s]", (6, 101), "6--101"), min(vel), max(vel), 0.5)
+    check_range(Claim("O2", "Sec 6", "median velocity CRLB, 7-d arcs [mm/s]", (6, 108), "6--108"), min(vel), max(vel), 0.5)
     check_range(Claim("O3", "Sec 6", "share of 7-d arcs that are observable [%]", (75, 84), "75\\,\\% and 84"),
                 min(frac), max(frac), 0.5)
-    check_range(Claim("O4", "Sec 6", "median weak-direction angle to LOS, DRO & L2 [deg]", (6.6, 7.8), "6.6--7.8"),
+    check_range(Claim("O4", "Sec 6", "median weak-direction angle to LOS, DRO & L2 [deg]", (6.4, 7.8), "6.4--7.8"),
                 min(weak["DRO"], weak["L2"]), max(weak["DRO"], weak["L2"]), 0.05)
-    check_range(Claim("O5", "Sec 6", "median weak-direction angle, NRHO & L1 [deg]", (12.7, 18.3), "12.7--18.3"),
+    check_range(Claim("O5", "Sec 6", "median weak-direction angle, NRHO & L1 [deg]", (12.8, 17.9), "12.8--17.9"),
                 min(weak["NRHO"], weak["L1"]), max(weak["NRHO"], weak["L1"]), 0.05)
 
 
@@ -244,8 +244,8 @@ def claims_filters():
     if f is None:
         return skip(Claim("F", "Sec 6", "tracking claims", None), "filter_summary.csv")
     from scipy.stats import chi2
-    tab = {"NRHO": (1.13, 1.10, 4.51, 1.08, 4.40), "L1": (1.74, 2.33, 9.12, 2.10, 7.66),
-           "L2": (17.60, 15.25, 6.35, 15.15, 6.31), "DRO": (6.95, 6.88, 6.23, 6.93, 6.25)}
+    tab = {"NRHO": (1.16, 1.58, 5.13, 1.58, 5.14), "L1": (1.83, 1.94, 5.71, 1.97, 5.36),
+           "L2": (17.88, 9.60, 9.25, 9.50, 6.05), "DRO": (7.16, 6.05, 5.13, 6.15, 5.15)}
     for o, (crlb, ee, ea, ue, ua) in tab.items():
         r = {x["filter"]: x for x in f if x["orbit"] == ORB[o] and x["mode"] == "track"}
         check_num(Claim(f"F1.{o}.crlb", "Table 2", f"{o} CRLB of chosen arc", crlb), r["EKF"]["crlb_sig_pos_max_km"], 0.005)
@@ -258,9 +258,9 @@ def claims_filters():
     bad = [(o, k) for o in ORB for x in f if x["orbit"] == ORB[o] and x["mode"] == "track"
            for k in [x["filter"]] if not (lo < x["anees_2nd_half"] < hi)]
     record(Claim("F2", "Sec 6", "tracking ANEES outside the 95% band of 20 runs "
-                                f"[{lo:.2f}, {hi:.2f}]: only NRHO (both, conservative) and L1 (both)",
-                 "NRHO,L1", "lies outside the 95\\,\\% band"),
-           "PASS" if sorted({o for o, _ in bad}) == ["L1", "NRHO"] else "FAIL", ", ".join(f"{o}/{k}" for o, k in bad))
+                                f"[{lo:.2f}, {hi:.2f}]: only the EKF on the L2 Lyapunov orbit",
+                 "L2/EKF", "except the EKF\non the $L_2$ Lyapunov orbit"),
+           "PASS" if bad == [("L2", "EKF")] else "FAIL", ", ".join(f"{o}/{k}" for o, k in bad))
 
 
 def claims_reacquisition():
@@ -270,7 +270,9 @@ def claims_reacquisition():
     r = {x["filter"]: x for x in s if x["orbit"] == ORB["L1"]}
     n = int(r["EKF"]["runs"])
     k = {f: int(round(x["runs_consistent"] * x["runs"])) for f, x in r.items()}
-    paper = {"EKF": 25, "UKF": 55, "GM-UKF": 99, "PF→UKF": 91}
+    check_num(Claim("R0", "Sec 6 / abstract", "L1 reacquisition: gap before the first measurement [d]", 3.0,
+                    "measurement arrives 3.0\\,d after"), r["EKF"]["gap_before_first_meas_d"], 0.05)
+    paper = {"EKF": 37, "UKF": 77, "GM-UKF": 100, "PF→UKF": 88}
     for f, pv in paper.items():
         lo, hi = wilson(k[f], n)
         ci = f"n={n}, 95% CI {100 * lo:.0f}-{100 * hi:.0f}%"
@@ -285,9 +287,9 @@ def claims_reacquisition():
                   "p<=0.02", "p \\le 0.02" if a_ == "GM-UKF" else None)
         record(c, "PASS" if (p <= 0.02 and k[a_] > k[b_]) else "WEAK", f"{k[a_]}/{n} vs {k[b_]}/{n}, p={p:.3g}",
                "" if p < 0.05 else "difference not significant: do not claim it, or add runs")
-    med = {"EKF": 12.6, "UKF": 3.82, "GM-UKF": 1.50, "PF→UKF": 1.5}   # PF: resampling is platform-sensitive
-    mx = {"EKF": 561.8, "UKF": 241.9, "GM-UKF": 4.2, "PF→UKF": 18.5}
-    an = {"EKF": 7.5e3, "UKF": 1.0e3, "GM-UKF": 7.0, "PF→UKF": 21.2}
+    med = {"EKF": 68.0, "UKF": 31.0, "GM-UKF": 24.3, "PF→UKF": 27.6}   # PF: resampling is platform-sensitive
+    mx = {"EKF": 1792.7, "UKF": 251.5, "GM-UKF": 95.4, "PF→UKF": 1546.9}
+    an = {"EKF": 3.4e3, "UKF": 64.0, "GM-UKF": 5.9, "PF→UKF": 1.3e3}
     for fl in paper:
         check_num(Claim(f"R3.{fl}.med", "Table 2", f"{fl} median final error [km]", med[fl]),
                   r[fl]["median_pos_err_km"], 0.05 if fl == "PF→UKF" or med[fl] >= 10 else 0.005)
@@ -295,15 +297,19 @@ def claims_reacquisition():
         tol = 0.05 * an[fl] if an[fl] > 100 else 0.05
         check_num(Claim(f"R3.{fl}.anees", "Table 2", f"{fl} ANEES", an[fl]), r[fl]["anees_2nd_half"], tol)
     check_num(Claim("R4", "Sec 6", "GM-UKF max components (L1)", 27, "up to 27"), r["GM-UKF"]["max_components"], 0)
-    oth = [(o, f_) for o in ("NRHO", "L2", "DRO") for f_ in ("EKF", "UKF", "GM-UKF")]
-    v = [100 * next(x for x in s if x["orbit"] == ORB[o] and x["filter"] == f_)["runs_consistent"] for o, f_ in oth]
-    check_range(Claim("R9", "Sec 6", "other orbits: EKF/UKF/GM-UKF runs consistent [%]", (99, 100), "99--100"),
+    cons = lambda o, f_: 100 * next(x for x in s if x["orbit"] == ORB[o] and x["filter"] == f_)["runs_consistent"]
+    gaps = [next(x for x in s if x["orbit"] == ORB[o])["gap_before_first_meas_d"] for o in ("NRHO", "L2", "DRO")]
+    check_range(Claim("R9a", "Sec 6", "other orbits: reacquisition gaps [d]", (1.9, 3.2), "1.9--3.2\\,d"),
+                min(gaps), max(gaps), 0.05)
+    v = [cons(o, f_) for o in ("NRHO", "L2", "DRO") for f_ in ("UKF", "GM-UKF")]
+    check_range(Claim("R9", "Sec 6", "other orbits: UKF and GM-UKF runs consistent [%]", (94, 99), "94--99"),
                 min(v), max(v), 0.5)
-    v = [100 * next(x for x in s if x["orbit"] == ORB[o] and x["filter"] == "PF→UKF")["runs_consistent"]
-         for o in ("NRHO", "L2", "DRO")]
-    check_range(Claim("R10", "Sec 6", "other orbits: PF→UKF runs consistent [%]", (96, 98), "(96--98"),
+    v = [cons(o, "EKF") for o in ("NRHO", "L2", "DRO")]
+    check_range(Claim("R9b", "Sec 6", "other orbits: EKF runs consistent [%]", (60, 85), "60--85"), min(v), max(v), 0.5)
+    v = [cons(o, "PF→UKF") for o in ("NRHO", "L2", "DRO")]
+    check_range(Claim("R10", "Sec 6", "other orbits: PF→UKF runs consistent [%]", (91, 95), "91--95"),
                 min(v), max(v), 0.5)
-    check_num(Claim("R5", "Sec 6", "GM-UKF mean components (L1)", 3.1, "averaging 3.1"), r["GM-UKF"]["mean_components"], 0.05)
+    check_num(Claim("R5", "Sec 6", "GM-UKF mean components (L1)", 3.0, "averaging 3.0"), r["GM-UKF"]["mean_components"], 0.05)
     t = {f: x["sec_per_run"] for f, x in r.items()}
     ratio = t["GM-UKF"] / t["UKF"]
     check_bool(Claim("R6", "Discussion", "GM-UKF costs about twice a UKF (1.5-2.5x)", True, "about twice"),
@@ -314,10 +320,10 @@ def claims_reacquisition():
                "missing nonlinear_prior_containment.csv (re-run nonlinear_filter_study.py)")
     else:
         x = next(p for p in pc if p["orbit"] == ORB["L1"])
-        v = [100 * x[f"inside99_{f}"] for f in ("EKF", "UKF", "GM-UKF")]
-        check_range(Claim("R7", "Sec 6", "PF particles inside Gaussian 99% ellipsoids at first measurement [%]",
-                          (96, 98), "96--98"), min(v), max(v), 0.5)
-        check_range(Claim("R8", "Sec 6", "L1 prior cloud 1-99% span [10^3 km]", (31, 10), "31\\,000 \\times 10\\,000"),
+        for f_, pv, tx in (("EKF", 73, "contains only 73"), ("UKF", 94, "against 94"), ("GM-UKF", 96, "96\\,\\% for\nthe GM-UKF")):
+            check_num(Claim(f"R7.{f_}", "Sec 6", f"L1: PF particles inside the {f_} 99% ellipsoid at first measurement [%]",
+                            pv, tx), 100 * x[f"inside99_{f_}"], 0.5)
+        check_range(Claim("R8", "Sec 6", "L1 prior cloud 1-99% span [10^3 km]", (42, 7.6), "42\\,000 \\times 7600"),
                     x["span1_km"] / 1e3, x["span2_km"] / 1e3, 0.5)
 
 
@@ -327,22 +333,22 @@ def claims_custody():
         return skip(Claim("K", "Sec 7", "custody claims", None), "custody_cases.csv")
     ph = [r for r in c if r["scenario"] == "phase"]
     bl = [r for r in c if r["scenario"] == "blackout"]
-    check_num(Claim("K0", "Sec 4", "number of custody cases", 525, "525 cases"), float(len(c)), 0)
+    check_num(Claim("K0", "Sec 4", "number of custody cases", 523, "523 cases"), float(len(c)), 0)
     cu = distinct(c)
-    check_num(Claim("K0b", "Sec 4", "number of distinct arcs among the custody cases", 394, "394 are distinct"),
+    check_num(Claim("K0b", "Sec 4", "number of distinct arcs among the custody cases", 393, "393 are distinct"),
               float(len(cu)), 0)
     OP = "ut_actual"   # operator horizon: circle centred on the UT-predicted direction (headline since M8)
     tab3 = {  # Table 3 (operator horizon): (orbit, arc): sigma0, {N: (p50, p10, p90)}
-        ("L1", 1): (20.0, {1: (8.8, 5.5, 9.9), 10: (10.9, 7.3, 12.4), 100: (12.7, 9.6, 13.7)}),
-        ("L1", 3): (5.1, {1: (11.7, 8.0, 12.5), 10: (13.2, 10.1, 14.2), 100: (14.9, 13.4, 17.3)}),
-        ("L1", 7): (0.7, {1: (14.3, 13.0, 15.3), 10: (16.5, 14.6, 18.4), 100: (18.5, 16.4, 20.0)}),
-        ("L2", 1): (30.2, {1: (9.5, 7.7, 11.2), 10: (12.5, 9.9, 15.3), 100: (15.8, 12.9, 18.0)}),
-        ("L2", 3): (15.5, {1: (10.3, 9.1, 13.5), 10: (14.9, 11.2, 16.6), 100: (18.0, 15.4, 18.9)}),
-        ("L2", 7): (7.0, {1: (13.9, 11.9, 15.8), 10: (17.4, 15.5, 18.6), 100: (19.1, 18.3, 21.2)}),
-        ("NRHO", 1): (23.8, {1: (30, 5.3, 30), 10: (30, 18.4, 30), 100: (30, 30, 30)}),
-        ("NRHO", 3): (3.9, {1: (30, 30, 30), 10: (30, 30, 30), 100: (30, 30, 30)}),
+        ("L1", 1): (20.8, {1: (8.8, 5.5, 9.9), 10: (10.9, 7.3, 12.2), 100: (12.6, 9.5, 13.7)}),
+        ("L1", 3): (5.1, {1: (11.6, 7.9, 12.4), 10: (13.2, 10.0, 14.1), 100: (14.9, 13.4, 17.1)}),
+        ("L1", 7): (0.8, {1: (14.3, 13.0, 15.3), 10: (16.4, 14.6, 18.3), 100: (18.3, 16.3, 19.9)}),
+        ("L2", 1): (33.5, {1: (9.4, 7.6, 10.9), 10: (12.3, 9.7, 15.4), 100: (16.2, 12.8, 18.0)}),
+        ("L2", 3): (16.2, {1: (10.3, 9.0, 13.4), 10: (14.9, 11.2, 16.4), 100: (18.0, 15.3, 18.8)}),
+        ("L2", 7): (7.4, {1: (13.7, 11.6, 15.7), 10: (17.3, 15.4, 18.3), 100: (19.1, 18.3, 21.1)}),
+        ("NRHO", 1): (24.5, {1: (30, 5.3, 30), 10: (30, 18.4, 30), 100: (30, 30, 30)}),
+        ("NRHO", 3): (4.1, {1: (30, 30, 30), 10: (30, 30, 30), 100: (30, 30, 30)}),
         ("NRHO", 7): (0.9, {1: (30, 30, 30), 10: (30, 30, 30), 100: (30, 30, 30)}),
-        ("DRO", 1): (31.8, {1: (30, 7.8, 30), 10: (30, 30, 30), 100: (30, 30, 30)}),
+        ("DRO", 1): (31.9, {1: (30, 7.8, 30), 10: (30, 30, 30), 100: (30, 30, 30)}),
         ("DRO", 3): (11.7, {1: (30, 30, 30), 10: (30, 30, 30), 100: (30, 30, 30)}),
         ("DRO", 7): (1.4, {1: (30, 30, 30), 10: (30, 30, 30), 100: (30, 30, 30)}),
     }
@@ -384,25 +390,25 @@ def claims_custody():
         l14 = 100 * np.median([r["contain_lin_14d"] for r in cu if r["orbit"] == ORB["L1"]])
         u14 = 100 * np.median([r["contain_ut_14d"] for r in cu if r["orbit"] == ORB["L1"]])
         check_num(Claim("K4", "Sec 8", "L1 linear 99% ellipse containment at 14 d, median over all L1 arcs [%]",
-                        5.4, "only 5.4"), l14, 0.05)
+                        5.3, "only 5.3"), l14, 0.05)
         check_num(Claim("K5", "Sec 8", "L1 UT containment at 14 d, median over all L1 arcs [%]", 98,
                         "contains 98"), u14, 0.5)
     else:
         record(Claim("K2", "Sec 7", "growth-curve claims", None), "SKIP", "-", "missing custody_curves.npz")
     med = lambda o, a, N: np.median(cap30([r[f"tc_{OP}_N{N}"] for r in ph if r["orbit"] == ORB[o] and r["arc_d"] == a]))
     gains = [med(o, a, 100) - med(o, a, 10) for o in ("L1", "L2") for a in (1, 3, 7)]
-    check_range(Claim("K6", "Sec 7", "gain from 10 -> 100 fields, unstable orbits [d]", (1.7, 3.3), "1.7--3.3"),
+    check_range(Claim("K6", "Sec 7", "gain from 10 -> 100 fields, unstable orbits [d]", (1.7, 3.9), "1.7--3.9"),
                 min(gains), max(gains), 0.05)
     t7 = [med(o, 7, N) for o in ("L1", "L2") for N in (1, 10, 100)]
-    check_range(Claim("K7", "Sec 7", "7-d arcs: median operator T_c for N=1..100, unstable [d]", (13.9, 19.1), "13.9--19.1"),
+    check_range(Claim("K7", "Sec 7", "7-d arcs: median operator T_c for N=1..100, unstable [d]", (13.7, 19.1), "13.7--19.1"),
                 min(t7), max(t7), 0.05)
     t10 = [med(o, a, 10) for o in ("L1", "L2") for a in (1, 3, 7)]
-    check_range(Claim("K8", "Sec 7", "median operator T_c(N=10), unstable orbits, all arcs [d]", (10.9, 17.4),
-                      "10.9--17.4"), min(t10), max(t10), 0.05)
-    check_range(Claim("K8b", "abstract / Sec 12", "median operator T_c(N=10), unstable orbits, rounded [d]", (11, 17),
+    check_range(Claim("K8", "Sec 7", "median operator T_c(N=10), unstable orbits, all arcs [d]", (10.9, 17.3),
+                      "10.9--17.3"), min(t10), max(t10), 0.05)
+    check_range(Claim("K8b", "abstract / Sec 13", "median operator T_c(N=10), unstable orbits, rounded [d]", (11, 17),
                       "11--17\\,days"), round(min(t10)), round(max(t10)), 0)
-    check_range(Claim("K8c", "Sec 7", "L1 halo median operator T_c(N=10), 1-d -> 7-d arcs [d]", (10.9, 16.5),
-                      "from 10.9 to 16.5"), med("L1", 1, 10), med("L1", 7, 10), 0.05)
+    check_range(Claim("K8c", "Sec 7", "L1 halo median operator T_c(N=10), 1-d -> 7-d arcs [d]", (10.9, 16.4),
+                      "from 10.9 to 16.4"), med("L1", 1, 10), med("L1", 7, 10), 0.05)
     # operator (UT-centred) vs ideal (true-mean) horizon, all distinct arcs
     dmax, rat = {}, []
     for N in (1, 10, 100):
@@ -411,20 +417,20 @@ def claims_custody():
         dmax[N] = float(np.max(np.abs(b_ - a_)))
         ok = (a_ > 0) & (a_ < 30)
         rat.append(float(np.median(b_[ok] / a_[ok])))
-    check_num(Claim("K14a", "Sec 7", "max |operator - ideal T_c| over distinct arcs, N=1 and 10 [d]", 0.4,
-                    "within 0.4\\,d for $N \\le 10$"), max(dmax[1], dmax[10]), 0.05)
-    check_num(Claim("K14b", "Sec 7", "max |operator - ideal T_c| over distinct arcs, N=100 [d]", 0.9,
-                    "0.9\\,d for $N = 100$"), dmax[100], 0.05)
+    check_num(Claim("K14a", "Sec 7", "max |operator - ideal T_c| over distinct arcs, N=1 and 10 [d]", 0.8,
+                    "within 0.8\\,d for $N \\le 10$"), max(dmax[1], dmax[10]), 0.05)
+    check_num(Claim("K14b", "Sec 7", "max |operator - ideal T_c| over distinct arcs, N=100 [d]", 1.5,
+                    "1.5\\,d for $N = 100$"), dmax[100], 0.05)
     check_range(Claim("K14c", "Sec 7", "median operator/ideal T_c ratio over distinct arcs, N=1..100", (1.00, 1.00),
                       "median ratio 1.00"), min(rat), max(rat), 0.005)
     # Table 4 blackouts
     tab4 = {("NRHO", 1): (9, 10.5, 67, 78, 78), ("NRHO", 3): (11, 10.5, 100, 100, 100),
             ("NRHO", 7): (11, 10.5, 100, 100, 100),
             ("L1", 1): (27, 3.1, 67, 89, 93), ("L1", 3): (27, 3.1, 93, 96, 96), ("L1", 7): (28, 3.1, 100, 100, 100),
-            ("L2", 1): (34, 4.1, 65, 74, 94), ("L2", 3): (34, 4.1, 79, 97, 97), ("L2", 7): (34, 4.1, 91, 100, 100),
+            ("L2", 1): (33, 4.1, 67, 76, 94), ("L2", 3): (34, 4.1, 79, 97, 97), ("L2", 7): (34, 4.1, 88, 100, 100),
             ("DRO", 1): (13, 11.3, 46, 85, 85), ("DRO", 3): (13, 11.3, 100, 100, 100),
             ("DRO", 7): (13, 11.3, 100, 100, 100)}
-    surv = {}
+    surv, n_diff = {}, []
     for (o, a), (n, ml, s1, s10, s100) in tab4.items():
         sel = [r for r in bl if r["orbit"] == ORB[o] and r["arc_d"] == a]
         L = np.array([r["blackout_d"] for r in sel])
@@ -434,14 +440,18 @@ def claims_custody():
         surv[(o, a)] = got[3]
         paper = [n, ml, s1, s10, s100]
         ok = all(close(p, g, t) for p, g, t in zip(paper, got, (0, 0.05, 0.5, 0.5, 0.5)))
-        ok = ok and all(close(x, y, 1e-9) for x, y in zip(ideal, got[2:]))   # caption: ideal gives identical shares
+        n_diff += [(o, a, N, x) for N, x, y in zip((1, 10, 100), ideal, got[2:]) if not close(x, y, 1e-9)]
         kN = int(round(got[3] * len(sel) / 100))
         lo, hi = wilson(kN, len(sel))
         record(Claim(f"K9.{o}.{a}", "Table 4", f"{o} {a}-d blackouts: n, median length, survived N=1/10/100 (operator = ideal)",
                      " / ".join(f"{x:g}" for x in paper)),
                "PASS" if ok else "FAIL", " / ".join(f"{x:.3g}" for x in got),
                f"N=10 survival 95% CI {100 * lo:.0f}-{100 * hi:.0f}%")
-    for a, pr in ((1, (74, 89)), (3, (96, 100)), (7, (100, 100))):
+    d_ = ", ".join(f"{o} {a:g}-d N={N}: ideal {x:.0f}%" for o, a, N, x in n_diff)
+    check_bool(Claim("K9b", "Table 4", "ideal and operator survival shares differ in one cell only (L1 1-d N=1, 63%)", True,
+                     "63\\,\\%)"), len(n_diff) == 1 and n_diff[0][:3] == ("L1", 1.0, 1) and round(n_diff[0][3]) == 63,
+               d_ or "none")
+    for a, pr in ((1, (76, 89)), (3, (96, 100)), (7, (100, 100))):
         v = [surv[(o, a)] for o in ORB]
         check_range(Claim(f"K10.{a}", "abstract", f"blackouts survived (N=10) after {a}-d arcs, all orbits [%]", pr),
                     min(v), max(v), 0.5)
@@ -454,16 +464,16 @@ def claims_custody():
         if g == "ut":
             k = int(np.sum(cl_[fin] > 1.1 * ac_[fin]))
             check_num(Claim("K11", "Sec 8", "distinct arcs with UT false custody at N=10 (claim > 1.1 x actual)", 2,
-                            "in 2 of the 254"), float(k), 0)
+                            "in 2 of the 253"), float(k), 0)
             RESULTS[-1] = (RESULTS[-1][0], RESULTS[-1][1], RESULTS[-1][2], f"{share:.1f}% of {fin.sum()} arcs")
-            check_num(Claim("K11b", "Sec 8", "distinct arcs with a finite UT-centred horizon at N=10", 254,
-                            "in 2 of the 254"), float(fin.sum()), 0)
+            check_num(Claim("K11b", "Sec 8", "distinct arcs with a finite UT-centred horizon at N=10", 253,
+                            "in 2 of the 253"), float(fin.sum()), 0)
         else:
             record(Claim("K12", "info", "linear false-custody share at N=10 (not in paper)", "-"), "PASS",
                    f"{share:.1f}% of {fin.sum()} cases", "information only")
     # predictors
     paper_r2 = {"ftle": {1: None, 10: None, 100: None}, "ut_claim": {1: 0.96, 10: 1.00, 100: 0.93},
-                "lin_claim": {1: 0.96, 10: 0.99, 100: 0.97}}
+                "lin_claim": {1: 0.92, 10: 0.99, 100: 0.97}}
     ftle, ns = [], []
     for N in (1, 10, 100):
         a_ = np.array([r[f"tc_ideal_N{N}"] for r in cu])
@@ -478,9 +488,9 @@ def claims_custody():
                       0.005, weak=weak)
             if not weak:
                 RESULTS[-1] = (RESULTS[-1][0], RESULTS[-1][1], RESULTS[-1][2], f"n={n}; CI {blo:.2f}-{bhi:.2f}")
-    check_range(Claim("P2", "Sec 8", "log-R2 of orbit-only FTLE predictor, N=1..100", (-0.23, 0.04), "-0.23"),
+    check_range(Claim("P2", "Sec 8", "log-R2 of orbit-only FTLE predictor, N=1..100", (-0.25, 0.04), "-0.25"),
                 min(ftle), max(ftle), 0.005)
-    check_range(Claim("P3", "Sec 8", "number of distinct arcs used for the R2 values", (251, 269), "251--269"),
+    check_range(Claim("P3", "Sec 8", "number of distinct arcs used for the R2 values", (250, 270), "250--270"),
                 min(ns), max(ns), 0)
 
 
@@ -500,9 +510,9 @@ def claims_ephemeris():
     check_range(Claim("E3", "Sec 9", "NRHO continuity residual median-max [km]", (50, 124), "50--124"),
                 g[ORB["NRHO"]]["median_continuity_km"], g[ORB["NRHO"]]["max_continuity_km"], 0.6)
     check_num(Claim("E4", "Sec 9", "number of ephemeris cases", 60, "60 custody cases"), float(len(e)), 0)
-    tab5 = {("NRHO", 1): (8, 30, 28.3, 0.98), ("NRHO", 7): (7, 30, 30, None), ("L1", 1): (4, 8.5, 7.8, 0.93),
-            ("L1", 7): (11, 15.9, 15.9, 1.01), ("L2", 1): (6, 12.5, 11.3, 0.94), ("L2", 7): (9, 15.9, 16.3, 0.99),
-            ("DRO", 1): (6, 30, 30, 0.99), ("DRO", 7): (9, 30, 30, None)}
+    tab5 = {("NRHO", 1): (8, 30, 28.3, 0.98), ("NRHO", 7): (7, 30, 30, None), ("L1", 1): (4, 8.4, 7.8, 0.93),
+            ("L1", 7): (11, 15.9, 15.8, 1.00), ("L2", 1): (5, 11.9, 11.3, 0.95), ("L2", 7): (10, 15.8, 16.4, 1.00),
+            ("DRO", 1): (6, 30, 30, 1.00), ("DRO", 7): (9, 30, 30, None)}
     ratios = []
     for (o, a), (n, tcc, tce, ratio) in tab5.items():
         sel = [r for r in e if r["orbit"] == ORB[o] and r["arc_d"] == a]
@@ -520,15 +530,15 @@ def claims_ephemeris():
                      f"{n} / {fmt_tc(tcc)} / {fmt_tc(tce)} / {ratio}"),
                ("WEAK" if weak else "PASS") if ok else "FAIL",
                f"{got[0]} / {fmt_tc(got[1])} / {fmt_tc(got[2])} / {'-' if rat is None else f'{rat:.2f}'}", weak)
-    check_range(Claim("E6", "abstract / Sec 9", "range of median ephemeris/CR3BP T_c ratios", (0.93, 1.01), "0.93--1.01"),
+    check_range(Claim("E6", "abstract / Sec 9", "range of median ephemeris/CR3BP T_c ratios", (0.93, 1.00), "0.93--1.00"),
                 min(ratios), max(ratios), 0.005)
     eu = distinct(e)
-    check_num(Claim("E4b", "Sec 9", "distinct arcs among the ephemeris cases", 59, "59 distinct"), float(len(eu)), 0)
+    check_num(Claim("E4b", "Sec 9", "distinct arcs among the ephemeris cases", 58, "58 distinct"), float(len(eu)), 0)
     cc = np.array([r["tc_cr3bp_ideal_N10"] for r in eu])
     ee = np.array([r["tc_ephem_ideal_N10"] for r in eu])
     fin = np.isfinite(cc) & np.isfinite(ee)
     n_out = int(np.sum(np.abs(cc[fin] - ee[fin]) > 3.0) + np.sum(np.isfinite(cc) != np.isfinite(ee)))
-    check_num(Claim("E7", "Sec 9", "distinct arcs whose T_c(N=10) changes by > 3 d (or crosses 30 d)", 6, "6 of the 59"),
+    check_num(Claim("E7", "Sec 9", "distinct arcs whose T_c(N=10) changes by > 3 d (or crosses 30 d)", 5, "5 of the 58"),
               n_out, 0)
     diffs = []
     for o in ORB:
@@ -541,17 +551,17 @@ def claims_ephemeris():
             se = np.sum(np.array([r["tc_ephem_ideal_N10"] for r in sel]) >= L)
             if sc != se:
                 diffs.append(f"{o} {a:.0f}d: {sc}/{len(sel)} -> {se}/{len(sel)}")
-    check_num(Claim("E8", "Sec 9", "blackout groups whose survival count differs CR3BP vs ephemeris", 2,
-                    "two single-case"), float(len(diffs)), 0)
+    check_num(Claim("E8", "Sec 9", "blackout groups whose survival count differs CR3BP vs ephemeris", 1,
+                    "one single-case"), float(len(diffs)), 0)
     RESULTS[-1] = (RESULTS[-1][0], RESULTS[-1][1], RESULTS[-1][2], "; ".join(diffs))
-    for N, pv in ((1, 0.90), (10, 1.00), (100, 0.80)):
+    for N, pv in ((1, 0.80), (10, 1.00), (100, 0.83)):
         a_ = np.array([r[f"tc_ephem_ideal_N{N}"] for r in eu])
         b_ = np.array([r[f"tc_ephem_ut_claim_N{N}"] for r in eu])
         r2, n, (blo, bhi) = r2log(a_, b_)
         weak = f"n={n}; bootstrap 95% CI {blo:.2f}-{bhi:.2f}" if (bhi - blo) > 0.1 or n < 30 else None
         check_num(Claim(f"E9.N{N}", "Sec 9", f"ephemeris UT log-R2, N={N}", pv), r2, 0.005, weak=weak)
-    for o, key, pv in (("L1", "contain_lin_ephem_14d", 12.6), ("L1", "contain_lin_cr3bp_14d", 10.3),
-                       ("L2", "contain_lin_ephem_14d", 84.8), ("L2", "contain_lin_cr3bp_14d", 98.6)):
+    for o, key, pv in (("L1", "contain_lin_ephem_14d", 12.0), ("L1", "contain_lin_cr3bp_14d", 9.9),
+                       ("L2", "contain_lin_ephem_14d", 79.9), ("L2", "contain_lin_cr3bp_14d", 98.7)):
         check_num(Claim(f"E10.{o}.{key}", "Sec 9", f"{o} {key} median [%]", pv),
                   100 * np.median([r[key] for r in e if r["orbit"] == ORB[o]]), 0.05)
     ut = [100 * np.median([r["contain_ut_ephem_14d"] for r in e if r["orbit"] == ORB[o]]) for o in ORB]
@@ -561,7 +571,7 @@ def claims_ephemeris():
 
 def claims_sensitivity():
     s = load("sensitivity_samples.csv")
-    c = Claim("S1", "Sec 11 limitations", "T_c converged in Monte Carlo sample size (300 vs larger sample)", None)
+    c = Claim("S1", "Sec 12 limitations", "T_c converged in Monte Carlo sample size (300 vs larger sample)", None)
     if s is None:
         return record(c, "SKIP", "-", "run scripts/sensitivity_check.py")
     big = [k for k in s[0] if k.startswith("tc_n") and not k.startswith("tc_n300")][0].split("_")[1]
@@ -587,22 +597,22 @@ def claims_sensitivity():
         meds.append(np.median(np.abs(a[fin] - b[fin])))
         if N >= 10:
             mx10 = max(mx10, np.max(np.abs(a[fin] - b[fin])))
-    check_num(Claim("S2", "Sec 11", "arcs in the sample-size check", 17, "17 representative arcs"), float(len(s)), 0)
-    check_range(Claim("S3", "Sec 11", "median |dT_c| 300 vs 2000 samples, N=1..100 [d]", (0.09, 0.14),
-                      "0.09--0.14\\,d"), min(meds), max(meds), 0.005)
-    check_num(Claim("S4", "Sec 11", "max |dT_c| for N=10 and 100 [d]", 0.9, "at most 0.9\\,d"), mx10, 0.05)
+    check_num(Claim("S2", "Sec 12", "arcs in the sample-size check", 17, "17 representative arcs"), float(len(s)), 0)
+    check_range(Claim("S3", "Sec 12", "median |dT_c| 300 vs 2000 samples, N=1..100 [d]", (0.08, 0.13),
+                      "0.08--0.13\\,d"), min(meds), max(meds), 0.005)
+    check_num(Claim("S4", "Sec 12", "max |dT_c| for N=10 and 100 [d]", 0.7, "at most 0.7\\,d"), mx10, 0.05)
     a = np.array([r["tc_n300_N1"] for r in s])
     b = np.array([r[f"tc_{big}_N1"] for r in s])
     fin = np.isfinite(a) & np.isfinite(b)
     i = int(np.flatnonzero(fin)[np.argmax(np.abs(a[fin] - b[fin]))])
     w = s[i]
-    check_range(Claim("S5", "Sec 11", "N=1 worst case: T_c with 300 and 2000 samples [d]", (5.3, 17.6),
+    check_range(Claim("S5", "Sec 12", "N=1 worst case: T_c with 300 and 2000 samples [d]", (5.3, 17.6),
                       "from 5.3 to 17.6\\,d"), a[i], b[i], 0.05)
     RESULTS[-1] = (RESULTS[-1][0], RESULTS[-1][1], RESULTS[-1][2], f"{w['orbit']} {w['scenario']} {w['arc_d']:g}-d arc")
     per = {"NRHO 9:2": json.load(open(DATA / "named_orbits.json"))["NRHO_9:2"]["period_days"]}
     ph = np.mod(w["t_end_day"] + a[i], per.get(w["orbit"], np.inf))
     ph = min(ph, per.get(w["orbit"], np.inf) - ph)
-    check_bool(Claim("S6", "Sec 11", "N=1 worst case is an NRHO arc whose 300-sample horizon ends at perilune (< 0.1 d)",
+    check_bool(Claim("S6", "Sec 12", "N=1 worst case is an NRHO arc whose 300-sample horizon ends at perilune (< 0.1 d)",
                      True, "perilune passage"), w["orbit"] == "NRHO 9:2" and ph < 0.1,
                f"{w['orbit']}, {ph:.3f} d from perilune")
     if "tc_uni_N1" in s[0]:
@@ -613,10 +623,10 @@ def claims_sensitivity():
             fin = np.isfinite(a) & np.isfinite(b)
             gm.append(np.median(np.abs(a[fin] - b[fin])))
             gx.append(np.max(np.abs(a[fin] - b[fin])))
-        check_num(Claim("G1", "Sec 4", "grid check: max median |dT_c|, 121-point vs uniform 0.02-d grid [d]", 0.02,
-                        "median of at most 0.02\\,d"), max(gm), 0.005)
-        check_num(Claim("G2", "Sec 4", "grid check: max |dT_c| over all N, 121-point vs uniform grid [d]", 0.6,
-                        "at most 0.6\\,d"), max(gx), 0.05)
+        check_num(Claim("G1", "Sec 4", "grid check: max median |dT_c|, 121-point vs uniform 0.02-d grid [d]", 0.03,
+                        "median of at most 0.03\\,d"), max(gm), 0.005)
+        check_num(Claim("G2", "Sec 4", "grid check: max |dT_c| over all N, 121-point vs uniform grid [d]", 0.17,
+                        "at most 0.17\\,d"), max(gx), 0.05)
         check_num(Claim("G3", "Sec 4", "grid check: max |dT_c| for N=1 and 10 [d]", 0.15, "at most 0.15\\,d for $N = 1$"),
                   max(gx[:2]), 0.05)
     else:
@@ -644,7 +654,7 @@ def claims_families():
         dmax[N] = float(np.max(np.abs(b - cap30(a))))
     check_range(Claim("FS2a", "Sec 10 / abstract", "family sweep: median operator/ideal ratio, N=1..100", (1.00, 1.00),
                       "is 1.00 for all three search sizes"), min(rat), max(rat), 0.005)
-    for cid, N, pv in (("FS2b", 1, 0.34), ("FS2c", 10, 0.19), ("FS2d", 100, 1.15)):
+    for cid, N, pv in (("FS2b", 1, 0.17), ("FS2c", 10, 0.38), ("FS2d", 100, 1.18)):
         check_num(Claim(cid, "Sec 10", f"family sweep: max |operator - ideal T_c|, N={N} [d]", pv, f"{pv:.2f}\\,d"),
                   dmax[N], 0.005)
 
@@ -672,8 +682,8 @@ def claims_families():
     check_num(Claim("FS3c", "Sec 10", "members with nu > 10", 15, "15 members with $\\nu > 10$"), float(hi[3.0][2]), 0)
     check_bool(Claim("FS3d", "Sec 10", "nu > 10 correlation significant, p < 1e-5 (both arcs)", True, "p < 10^{-5}"),
                max(hi[3.0][1], hi[7.0][1]) < 1e-5, f"p = {hi[3.0][1]:.1g}, {hi[7.0][1]:.1g}")
-    check_range(Claim("FS3e", "Sec 10", "Spearman rho, all 25 members with nu > 1.01, 3-d and 7-d arcs", (-0.96, -0.91),
-                      "$-0.96$ and $-0.91$"), al[3.0][0], al[7.0][0], 0.005)
+    check_range(Claim("FS3e", "Sec 10", "Spearman rho, all 25 members with nu > 1.01, 3-d and 7-d arcs", (-0.97, -0.91),
+                      "$-0.97$ and $-0.91$"), al[3.0][0], al[7.0][0], 0.005)
     # FS4: within-family correlations; the L2 halo family is weak
     fr = {(fam, arc): rho([x for x in table(arc) if x[0] == fam and x[1] > 1.01])
           for fam in ("L1_halo_north", "L2_halo_south", "L1_lyapunov", "L2_lyapunov") for arc in (3.0, 7.0)}
@@ -696,17 +706,19 @@ def claims_families():
     check_bool(Claim("FS5a", "Sec 10", "all members with nu < 3 keep custody > 30 d after 7-d arcs", True,
                      "all 15 members with $\\nu < 3$"), len(st) == 15 and all(x[2] >= 30 for x in st), f"{len(st)} members")
     t3 = [x for x in table(3.0) if x[1] < 3 and x[2] < 30]
-    check_bool(Claim("FS5c", "Sec 10", "3-d arcs: the only nu < 3 member lost within 30 d has nu = 2.9 and T_c = 27.0 d",
-                     True, "$\\nu = 2.9$, lost at 27.0\\,d"),
-               len(t3) == 1 and close(2.9, t3[0][1], 0.05) and close(27.0, t3[0][2], 0.05),
+    t3 = sorted(t3, key=lambda x: x[1])
+    check_bool(Claim("FS5c", "Sec 10", "3-d arcs: the nu < 3 members lost within 30 d have nu 2.4, 2.9 and T_c 29.1, 26.9 d",
+                     True, "$\\nu = 2.4$ and 2.9, lost at 29.1 and 26.9\\,d"),
+               len(t3) == 2 and all(close(a, x[1], 0.05) and close(b, x[2], 0.05)
+                                    for (a, b), x in zip(((2.4, 29.1), (2.9, 26.9)), t3)),
                ", ".join(f"{x[0]} nu {x[1]:.2f} T_c {x[2]:.2f}" for x in t3))
     big = sorted(round(x[1]) for x in l2t if x[1] > 10 and x[2] >= 30 and x[0] == "L1_lyapunov")
     check_bool(Claim("FS5d", "Sec 10", "7-d arcs: nu > 10 members beyond 30 d are two L1 Lyapunov (nu 71, 113)", True,
                      "($\\nu = 71$ and 113)"),
                big == [71, 113] and sum(1 for x in l2t if x[1] > 10 and x[2] >= 30) == 2, str(big))
     un = [x[2] for x in l2t if x[1] > 10 and x[2] < 30]
-    check_range(Claim("FS5b", "Sec 10 / Discussion", "finite member-median T_c, nu > 10, 7-d arcs [d]", (13.0, 25.2),
-                      "13.0--25.2\\,d"), min(un), max(un), 0.05)
+    check_range(Claim("FS5b", "Sec 10 / Discussion", "finite member-median T_c, nu > 10, 7-d arcs [d]", (12.9, 25.2),
+                      "12.9--25.2\\,d"), min(un), max(un), 0.05)
     # FS6: strip search (secondary)
     for cid, N, pv in (("FS6a", 1, 0.97), ("FS6b", 10, 1.08), ("FS6c", 100, 0.98)):
         a = np.array([r[f"tc_ideal_N{N}"] for r in f])
@@ -718,14 +730,134 @@ def claims_families():
     b = np.array([r["tc_strip_N10"] for r in f])
     fin = np.isfinite(a) & (a < 30)
     gain = fin & (~np.isfinite(b) | (b > a + 3.0))
-    check_num(Claim("FS6d", "Sec 10", "N=10 cases where the strip gains > 3 d", 52, "52 of the 204"), float(gain.sum()), 0)
-    check_num(Claim("FS6e", "Sec 10", "N=10 cases with a finite ideal horizon", 204, "52 of the 204"), float(fin.sum()), 0)
+    check_num(Claim("FS6d", "Sec 10", "N=10 cases where the strip gains > 3 d", 54, "54 of the 206"), float(gain.sum()), 0)
+    check_num(Claim("FS6e", "Sec 10", "N=10 cases with a finite ideal horizon", 206, "54 of the 206"), float(fin.sum()), 0)
     lyap = sum(1 for r, g in zip(f, gain) if g and "lyapunov" in r["family"])
-    check_num(Claim("FS6f", "Sec 10", "gaining cases on the Lyapunov families", 48, "48 of them"), float(lyap), 0)
+    check_num(Claim("FS6f", "Sec 10", "gaining cases on the Lyapunov families", 49, "49 of them"), float(lyap), 0)
     cg = np.median([r["strip_cross99_arcsec"] for r, g in zip(f, gain) if g])
     co = np.median([r["strip_cross99_arcsec"] for r, g, x in zip(f, gain, fin) if x and not g])
-    check_range(Claim("FS6g", "Sec 10", "cross-track 99% half-width, gaining vs other cases [arcsec]", (0.5, 1.4),
-                      "0.5$''$"), cg, co, 0.05, weak="rests on the CRLB covariance (no biases); milestone 9 re-tests it")
+    check_range(Claim("FS6g", "Sec 10", "cross-track 99% half-width, gaining vs other cases [arcsec]", (0.6, 1.5),
+                      "0.6$''$"), cg, co, 0.05, weak="rests on the CRLB covariance (no biases); milestone 9 re-tests it")
+
+
+def claims_consider():
+    """Milestone 9: consider covariance (site biases, clock offsets, SRP errors), consider_study.py."""
+    rows = load("consider_cases.csv")
+    if rows is None:
+        return skip(Claim("C", "Sec 11", "consider-covariance claims", None), "consider_cases.csv (run consider_study.py)")
+    key = lambda r: (r["orbit"], r["arc_d"], round(r["t_end_day"], 6))
+    by = {}
+    for r in rows:
+        by.setdefault(r["config"], {})[key(r)] = r
+
+    def st(cfg, N=10):
+        ref = by[next(iter(by[cfg].values()))["ref"]]
+        pr = [(ref[k], r) for k, r in by[cfg].items() if k in ref]
+        ok = [(b, r) for b, r in pr if b[f"tc_ut_actual_N{N}"] < 30]
+        ra = np.array([min(r[f"tc_ut_actual_N{N}"], 30.0) / b[f"tc_ut_actual_N{N}"] for b, r in ok])
+        ri = np.array([min(r[f"tc_ideal_N{N}"], 30.0) / b[f"tc_ideal_N{N}"] for b, r in pr if b[f"tc_ideal_N{N}"] < 30])
+        fc = 100 * np.mean([r[f"tc_ut_claim_N{N}"] > 1.1 * r[f"tc_ut_actual_N{N}"] for _, r in ok])
+        return {"n": len(ok), "med": float(np.median(ra)), "p10": float(np.percentile(ra, 10)),
+                "n20": int(np.sum(ra < 0.8)), "f20": 100 * float(np.mean(ra < 0.8)), "fc": fc,
+                "ideal": float(np.median(ri)), "pairs": pr}
+
+    cc = load("custody_cases.csv")
+    if cc is not None:
+        ref = {key(r): r for r in cc if r["scenario"] == "phase"}
+        d = 0.0
+        for k, r in by["base"].items():
+            for N in (1, 10, 100):
+                for m in ("ideal", "ut_actual", "ut_claim"):
+                    a, b = ref[k][f"tc_{m}_N{N}"], r[f"tc_{m}_N{N}"]
+                    d = max(d, 0.0 if (not np.isfinite(a) and not np.isfinite(b)) else abs(a - b))
+        check_bool(Claim("C1", "Sec 11", "baseline (no extra errors) reproduces custody_cases.csv", True,
+                         "reproduces the horizons of Section~\\ref{sec:custody} exactly"), d < 1e-3, f"max |dT_c| {d:.2g} d")
+    check_num(Claim("C2a", "Sec 11", "arcs in the consider study", 126, "126 arcs"), float(len(by["base"])), 0)
+    nom = st("nominal")
+    check_num(Claim("C2b", "Sec 11", "arcs with a reference horizon < 30 d (N=10)", 67, "the 67 arcs"), float(nom["n"]), 0)
+    check_num(Claim("C3a", "Sec 11 / abstract", "nominal: median operator T_c ratio", 0.99, "0.99, 10th percentile 0.96"),
+              nom["med"], 0.005)
+    check_num(Claim("C3b", "Sec 11", "nominal: 10th percentile ratio", 0.96, "0.99, 10th percentile 0.96"), nom["p10"], 0.005)
+    check_num(Claim("C4a", "Sec 11", "site bias 0.2 arcsec: median ratio", 0.99, "up to 0.2$''$ (ratio 0.99)"),
+              st("bias0.2")["med"], 0.005)
+    b5 = st("bias0.5")
+    check_num(Claim("C4b", "Sec 11", "site bias 0.5 arcsec: median ratio", 0.95, "(ratio 0.95, with 5 arcs"), b5["med"], 0.005)
+    check_num(Claim("C4c", "Sec 11", "site bias 0.5 arcsec: arcs losing > 20 %", 5, "with 5 arcs losing"), float(b5["n20"]), 0)
+    c5 = st("common0.5")
+    check_bool(Claim("C4d", "Sec 11", "a common bias matters less than independent site biases (0.5 arcsec)", True,
+                     "A common bias matters less"), c5["med"] > b5["med"] and c5["fc"] < b5["fc"],
+               f"median {c5['med']:.3f} vs {b5['med']:.3f}")
+    ck = st("clock10ms")
+    check_bool(Claim("C5a", "Sec 11", "clock offsets of 10 ms have no effect (all ratios 1.000)", True, "clock offsets have no effect"),
+               abs(ck["med"] - 1) < 5e-4 and abs(ck["p10"] - 1) < 5e-4, f"median {ck['med']:.4f}, p10 {ck['p10']:.4f}")
+    sm = [st(f"srp_am{a:g}") for a in (0.005, 0.01, 0.02, 0.05)]
+    check_range(Claim("C6a", "Sec 11", "SRP modelled, A/m 0.005-0.05: median ratios", (0.98, 1.00), "0.98--1.00"),
+                min(x["med"] for x in sm), max(x["med"] for x in sm), 0.005)
+    check_num(Claim("C6b", "Sec 11", "SRP modelled, A/m 0.05: 10th percentile ratio", 0.82, "falls to 0.82"), sm[-1]["p10"], 0.005)
+    ns = st("nosrp_am0.05")
+    check_num(Claim("C7a", "Sec 11", "SRP not modelled, A/m 0.05: median ratio", 0.94, "the median ratio is 0.94"), ns["med"], 0.005)
+    check_num(Claim("C7b", "Sec 11", "SRP not modelled, A/m 0.05: arcs losing > 20 %", 8, "8 arcs lose"), float(ns["n20"]), 0)
+    check_num(Claim("C7c", "Sec 11", "SRP not modelled, A/m 0.05: ideal median ratio", 0.99, "hardly changes (ratio 0.99)"),
+              ns["ideal"], 0.005)
+    big = max((x for x in by), key=lambda c: 0 if c.startswith("base") else 1 - st(c)["med"] if "0.3" not in c and c != "conservative" else 0)
+    RESULTS.append((Claim("C7d", "Sec 11", "unmodelled SRP (A/m 0.05) is the largest single effect", True,
+                          "the largest single effect"), "PASS" if big == "nosrp_am0.05" else "FAIL", big, ""))
+    cv = st("conservative")
+    check_num(Claim("C8a", "Sec 11 / abstract", "conservative: median ratio", 0.93, "median ratio of 0.93"), cv["med"], 0.005)
+    check_num(Claim("C8b", "Sec 11", "conservative: 10th percentile", 0.71, "percentile 0.71"), cv["p10"], 0.005)
+    check_num(Claim("C8c", "Sec 11", "conservative: arcs losing > 20 %", 13, "13 arcs losing"), float(cv["n20"]), 0)
+    worst = {o: [0, 0] for o in ("NRHO 9:2", "DRO (~70k km)")}
+    ref = by["base"]
+    for c in by:
+        if c.startswith("base") or next(iter(by[c].values()))["ref"] != "base":
+            continue
+        for o in worst:
+            pr = [r for k, r in by[c].items() if k in ref and r["orbit"] == o and ref[k]["tc_ut_actual_N10"] >= 30]
+            worst[o] = [max(worst[o][0], sum(r["tc_ut_actual_N10"] < 30 for r in pr)), len(pr)]
+    worst = {o: tuple(v) for o, v in worst.items()}
+    check_bool(Claim("C8d", "Sec 11", "at most 2 of 28 NRHO arcs fall below 30 d, no DRO arc", True, "at most\n2 of the 28 NRHO arcs"),
+               worst["NRHO 9:2"] == (2, 28) and worst["DRO (~70k km)"][0] == 0, str(worst))
+    b0, b3 = by["base"], by["base_0.3"]
+    dg = [r["tc_ut_actual_N10"] - b0[k]["tc_ut_actual_N10"] for k, r in b3.items()
+          if k in b0 and b0[k]["tc_ut_actual_N10"] < 30 and r["tc_ut_actual_N10"] < 30]
+    check_num(Claim("C9a", "Sec 11", "0.3 arcsec noise: median horizon gain [d]", 1.8, "by a median of 1.8\\,d"),
+              float(np.median(dg)), 0.05)
+    n3, c3 = st("nominal_0.3"), st("conservative_0.3")
+    check_num(Claim("C9b", "Sec 11", "nominal, 0.3 arcsec: median ratio", 0.96, "(ratio 0.96)"), n3["med"], 0.005)
+    check_num(Claim("C9c", "Sec 11", "conservative, 0.3 arcsec: median ratio", 0.81, "(ratio 0.81"), c3["med"], 0.005)
+    check_num(Claim("C9d", "Sec 11", "conservative, 0.3 arcsec: share losing > 20 % [%]", 46, "46\\,\\% of the arcs"), c3["f20"], 0.5)
+    for cid, cfg, pv, tx in (("C10a", "base", 1.5, "in 1.5\\,\\% of the arcs"), ("C10b", "nominal", 9, "in 9\\,\\% under"),
+                             ("C10c", "bias0.5", 34, "in 34\\,\\% with"), ("C10d", "conservative_0.3", 82, "82\\,\\% for")):
+        check_num(Claim(cid, "Sec 11", f"CRLB-claim false custody, {cfg} [%]", pv, tx), st(cfg)["fc"], 0.05 if pv < 2 else 0.5)
+    try:
+        from cislunar_custody.frames import Ephemeris
+        from cislunar_custody.constants import MU_EM
+        from cislunar_custody.sensors import SITES, NETWORKS, TELESCOPES, network_visibility, radec
+        from cislunar_custody.timeutil import jd_from_iso, jd_grid, tu_from_jd
+        sys.path.insert(0, str(ROOT / "scripts"))
+        from visibility_study import representative_orbits, EPOCH, STEP_MIN, TARGET
+        jd0 = jd_from_iso(EPOCH)
+        jd = jd_grid(jd0, 365, STEP_MIN)
+        eph = Ephemeris(jd)
+        t = tu_from_jd(jd, jd0)
+        keys = list(NETWORKS["Tri-3+S"])
+        meds, p95 = [], []
+        for orb in representative_orbits().values():
+            r = eph.to_eci(orb.states_at(t), MU_EM)
+            ps, _ = network_visibility(eph, r, keys, SITES, TELESCOPES["1m"], TARGET, moon_excl_deg=5.0)
+            rr = []
+            for k in keys:
+                ra, dec = radec(r - eph.site_eci(SITES[k])[0])
+                w = np.hypot(np.gradient(np.unwrap(ra), STEP_MIN * 60) * np.cos(dec), np.gradient(dec, STEP_MIN * 60))
+                rr.append(w[ps[k].visible] * 206264.8)
+            rr = np.concatenate(rr)
+            meds.append(np.median(rr))
+            p95.append(np.percentile(rr, 95))
+        check_bool(Claim("C11", "Sec 11", "sky rate: median ~0.4 arcsec/s, 95th percentile < 0.7 arcsec/s (all orbits)", True,
+                         "less than 0.7$''$\\,s$^{-1}$"), all(0.35 <= m <= 0.45 for m in meds) and max(p95) < 0.7,
+                   f"medians {min(meds):.2f}-{max(meds):.2f}, p95 max {max(p95):.2f}")
+    except Exception as e:  # noqa: BLE001
+        record(Claim("C11", "Sec 11", "sky rate", None), "MANUAL", "-", f"recompute failed: {e}")
 
 
 # ----------------------------------------------------------------------------- report
@@ -741,7 +873,7 @@ def tex_check(tex):
 
 def main(only, texfile):
     for f in (claims_models, claims_visibility, claims_observability, claims_filters, claims_reacquisition,
-              claims_custody, claims_ephemeris, claims_sensitivity, claims_families):
+              claims_custody, claims_ephemeris, claims_sensitivity, claims_families, claims_consider):
         try:
             f()
         except Exception as e:  # noqa: BLE001

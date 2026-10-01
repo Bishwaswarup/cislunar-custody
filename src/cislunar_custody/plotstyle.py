@@ -68,6 +68,7 @@ JAS_ORDER = {
     "fig17_growth_cr3bp_vs_ephemeris": 13,
     "fig18_tc_vs_stability": 14,
     "fig19_operator_vs_ideal": 15,
+    "fig20_consider_horizon": 16,
 }
 
 

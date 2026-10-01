@@ -299,13 +299,21 @@ FIG_CONFIGS = ("bias0.05", "bias0.1", "bias0.2", "bias0.5", "common0.1", "common
                "nominal", "conservative", "nominal_0.3", "conservative_0.3")
 
 
+LABELS = {"bias0.05": 'site bias 0.05"', "bias0.1": 'site bias 0.1"', "bias0.2": 'site bias 0.2"',
+          "bias0.5": 'site bias 0.5"', "common0.1": 'common bias 0.1"', "common0.5": 'common bias 0.5"',
+          "clock10ms": "clock 10 ms", "srp_am0.005": "SRP, A/m 0.005", "srp_am0.01": "SRP, A/m 0.01",
+          "srp_am0.02": "SRP, A/m 0.02", "srp_am0.05": "SRP, A/m 0.05", "nosrp_am0.01": "no SRP model, 0.01",
+          "nosrp_am0.05": "no SRP model, 0.05", "nominal": "nominal", "conservative": "conservative",
+          "nominal_0.3": 'nominal, 0.3" noise', "conservative_0.3": 'conservative, 0.3" noise'}
+
+
 def plots(rows):
     use_jas_style()
     have = {r["config"] for r in rows}
     cfgs = [c for c in FIG_CONFIGS if c in have]
     orbits = [o for o in ORBIT_STYLE if any(r["orbit"] == o for r in rows)]
     x = np.arange(len(cfgs))
-    fig, axes = plt.subplots(2, 1, figsize=(DOUBLE, 0.62 * DOUBLE), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=(DOUBLE, 0.72 * DOUBLE), sharex=True)
     off = np.linspace(-0.27, 0.27, max(len(orbits), 1))
     for j, o in enumerate(orbits):
         st = ORBIT_STYLE[o]
@@ -338,7 +346,7 @@ def plots(rows):
     axes[1].set_ylabel("operator $T_c$ / reference\n(N = 10)")
     axes[1].set_ylim(min(axes[1].get_ylim()[0], 0.75), None)
     axes[1].set_xticks(x)
-    axes[1].set_xticklabels(cfgs, rotation=45, ha="right")
+    axes[1].set_xticklabels([LABELS.get(c, c) for c in cfgs], rotation=45, ha="right")
     for ax, letter in zip(axes, "ab"):
         ax.grid(True, axis="y")
         panel_label(ax, letter)
