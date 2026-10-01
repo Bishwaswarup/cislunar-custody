@@ -1,0 +1,36 @@
+Dear Editor,
+
+Please consider the enclosed manuscript, "Custody Horizons for Ground-Based Angles-Only Tracking of
+Cislunar Periodic Orbits", for publication in The Journal of the Astronautical Sciences as a research
+article.
+
+Ground-based optical telescopes are the most accessible sensors for cislunar space domain awareness,
+but they lose sight of their targets for days at a time. The manuscript asks a question that
+operators face after every such gap: how long can an object on a cislunar periodic orbit go
+unobserved before a telescope search can no longer find it, and what determines that time? We
+define this custody horizon for a search centred on the operator's own unscented prediction and map
+it over a year of physically generated observations from a four-site network, for four
+representative orbits and for 30 members of five orbit families. The main findings are that the
+near-stable NRHO and DRO keep custody beyond 30 days while unstable L1 and L2 orbits are lost after
+11-17 days, mainly depending on the length of the preceding tracking arc; that the horizon is
+predicted by the unscented transform of the post-fit covariance but not by the finite-time Lyapunov
+exponent; that a Gaussian-mixture filter reacquires reliably after a 3-day gap where the extended
+Kalman filter fails; and that realistic site biases and solar-pressure errors barely shorten the
+horizons but make covariance-based custody claims overconfident. The conclusions are checked in a
+DE440 ephemeris model.
+
+The paper builds on cislunar orbit determination and custody studies published in this journal and
+should interest readers working on space domain awareness, sensor tasking and orbit determination.
+
+The manuscript is original, has not been published elsewhere, and is not under consideration by any
+other journal. No preprint has been posted. The author has no competing interests. The code, the
+data and a script that checks every number in the manuscript against those data are openly
+available (see the Data and code availability statement). The use of an AI assistant is declared in
+the Methods section, as the journal requires.
+
+Thank you for considering this submission.
+
+Sincerely,
+Bishwaswarup Nayak
+Department of Physics, Indian Institute of Science, Bengaluru 560012, India
+bishwaswarup@iisc.ac.in | ORCID 0009-0001-9926-5329

@@ -8,8 +8,9 @@ authors:
     affiliation: "Department of Physics, Indian Institute of Science, Bangalore, India"
     email: bishwaswarup@iisc.ac.in
     orcid: "https://orcid.org/0009-0001-9926-5329"
-version: 1.0.0
-date-released: 2026-09-29
+version: 1.1.0
+date-released: 2026-10-01
+doi: 10.5281/zenodo.23075048
 license: MIT
 repository-code: "https://github.com/Bishwaswarup/cislunar-custody"
 keywords:

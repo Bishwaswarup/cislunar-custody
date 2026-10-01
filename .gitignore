@@ -18,3 +18,9 @@ paper/*.out
 logs/
 paper/_test.*
 /.claude/
+paper/overleaf.zip
+paper/*.fdb_latexmk
+paper/*.fls
+paper/*.tmp
+paper/*.xdv
+paper/jas_upload/

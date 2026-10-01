@@ -12,7 +12,7 @@
 \usepackage{textcomp}
 \usepackage{manyfoot}
 \usepackage{orcidlink}
-\graphicspath{{../figures/jas/}}
+\graphicspath{{../figures/jas/}{figures/jas/}}   % repo layout, and the flat Overleaf zip
 
 \newcommand{\Tc}{T_{\mathrm{c}}}
 \newcommand{\vect}[1]{\bm{#1}}
@@ -58,7 +58,7 @@ orbits (DROs). Keeping track of these objects, that is, maintaining \emph{custod
 in near-Earth space for three reasons. The targets are faint and about 380\,000\,km away. Seen from
 Earth, they sit close to the brightest object in the night sky. And their motion is governed by
 the Earth--Moon three-body problem, which stretches uncertainty rapidly and makes it
-non-Gaussian~\cite{frueh2021}.
+non-Gaussian~\cite{frueh2021,holzinger2021primer,baker2024}.
 
 Ground-based optical telescopes are the most accessible sensors for this task.
 Sechrest et al.~\cite{sechrest2024} detected CAPSTONE at $g \approx 19.6$ and Orion at
@@ -101,28 +101,50 @@ simulation study. Its contributions are:
 %=====================================================================
 \section{Related Work}\label{sec:related}
 
-Chow et al.~\cite{chow2021,chow2022} processed ground-based angles-only and photometric
-observations from three sites for 15 periodic orbits. They found that Gaussian-mixture filters
-retain custody across data gaps where an unscented Kalman filter fails, and that two-body models lose
-the object after the first gap. Their gaps, however, were produced by decimating the data rather
-than by physical visibility. Frueh et al.~\cite{frueh2021} showed that even a global ground network
-leaves periods with no visibility because of lunar brightness, and that cislunar uncertainty
-develops strongly curved, non-Gaussian structure. For space-based observers, Iannamorelli and
-LeGrand~\cite{iannamorelli2023,iannamorelli2025} kept custody of a manoeuvring Artemis-like target
-across gaps of 1.7 and 2.6\,days with an adaptive Gaussian-mixture interacting-multiple-model
-filter. For initial orbit determination, Jo et al.~\cite{jo2026} developed a three-body
-differential-correction method for angles-only data and reviewed the alternatives. For observer
-placement, Wilmer and Bettinger~\cite{wilmer2022} studied NRHO surveillance from cislunar periodic
-orbits.
+Surveys of the cislunar problem~\cite{holzinger2021primer,baker2024} describe the growing traffic,
+the dynamical environment and the sensing challenges, among them faint targets close to the Moon and
+long observation gaps. Frueh et al.~\cite{frueh2021} showed that even a global ground network leaves
+periods with no visibility because of lunar brightness, and that cislunar uncertainty develops
+strongly curved, non-Gaussian structure.
 
-On the estimation side, this work builds on the unscented transform~\cite{julier2004,wan2000},
-entropy-triggered Gaussian-mixture splitting~\cite{demars2013}, and regularised particle filtering
-with progressive correction~\cite{oudjane2000,musso2001}. Consistency is assessed with the
-normalised estimation error squared (NEES)~\cite{barshalom2001}. The dynamical tools are standard
-methods for the circular restricted three-body problem~\cite{szebehely1967,koon2011}: Richardson's
-third-order halo approximation~\cite{richardson1980}, differential correction and pseudo-arclength
-continuation. The finite-time Lyapunov exponent (FTLE)~\cite{shadden2005} is the natural
-candidate for predicting how fast knowledge decays, and it is tested directly here.
+Much of the work on observation geometry concerns space-based observers. Vendl and
+Holzinger~\cite{vendl2021} identified cislunar periodic orbits that give persistent detection
+capability, Fowler and Paley~\cite{fowler2023} derived observability metrics for space-based cislunar
+observers, Wilmer and Bettinger~\cite{wilmer2022} studied NRHO surveillance from cislunar periodic
+orbits, and Bhadauria et al.~\cite{bhadauria2025} optimised the surveillance of key cislunar regions.
+From the ground, Sechrest et al.~\cite{sechrest2024} demonstrated detections of CAPSTONE and Orion,
+and Evans et al.~\cite{evans2025} combined lunar-phase and Earth-rotation visibility constraints with
+an information-matrix covariance analysis of angles-only tracking of six periodic-orbit families from
+a single ground station. That analysis, like Section~\ref{sec:filters} here, quantifies the
+uncertainty at the end of tracking; the present work continues from that uncertainty through the
+observation gap to the search that must find the object again.
+
+Custody across gaps has so far been studied with particular filters on particular trajectories.
+Chow et al.~\cite{chow2021,chow2022} processed ground-based angles-only and photometric observations
+from three sites for 15 periodic orbits. They found that Gaussian-mixture filters retain custody
+across data gaps where an unscented Kalman filter fails, and that two-body models lose the object
+after the first gap. Their gaps, however, were produced by decimating the data rather than by physical
+visibility. For space-based observers, Iannamorelli and LeGrand~\cite{iannamorelli2023,iannamorelli2025}
+kept custody of a manoeuvring Artemis-like target across gaps of 1.7 and 2.6\,days with an adaptive
+Gaussian-mixture interacting-multiple-model filter, and Greaves and Scheeres~\cite{greaves2021}
+estimated and detected manoeuvres of cislunar vehicles from optical measurements with an
+optimal-control-based estimator. For initial orbit determination, Jo et al.~\cite{jo2026} developed a
+three-body differential-correction method for angles-only data and reviewed the alternatives.
+
+On the estimation side, uncertainty propagation in orbital mechanics is reviewed by Luo and
+Yang~\cite{luo2017}. For strongly nonlinear dynamics, state transition tensors~\cite{park2006}, the
+unscented transform~\cite{julier2004,wan2000}, Gaussian mixtures with entropy-triggered
+splitting~\cite{demars2013} and regularised particle filters with progressive
+correction~\cite{oudjane2000,musso2001} trade cost against fidelity; the last three are used here.
+Consistency is assessed with the normalised estimation error squared (NEES)~\cite{barshalom2001}.
+Whether a predicted covariance is realistic, and not only consistent with the filter's own model, is
+the subject of covariance-realism work in space surveillance~\cite{poore2016}; the classical tool for
+errors that the estimator does not model is the consider covariance~\cite{tapley2004}, used in
+Section~\ref{sec:consider}. The dynamical tools are standard methods for the circular restricted
+three-body problem~\cite{szebehely1967,koon2011}: Richardson's third-order halo
+approximation~\cite{richardson1980}, differential correction and pseudo-arclength continuation. The
+finite-time Lyapunov exponent (FTLE)~\cite{shadden2005} is the natural candidate for predicting how fast
+knowledge decays, and it is tested directly here.
 
 %=====================================================================
 \section{Models}\label{sec:models}
@@ -209,7 +231,14 @@ Four filters share one measurement model:
 The truth has no process noise. The filters carry a small white acceleration noise with power
 spectral density $10^{-18}$\,km$^2$\,s$^{-3}$.
 
-%% [Declaration of AI-assisted tools: to be written by the author here, in the Methods section, as required by JAS.]
+\subsection{Declaration of AI-assisted tools}\label{sec:ai}
+The author used Claude (Anthropic), a large language model, as an assistant during this work. It was
+used to draft and revise parts of the simulation and analysis code, the script that checks the numbers
+in this paper, and the manuscript text, and to check references against bibliographic databases. The
+author conceived the study, chose the models, parameters and error budgets, ran all simulations,
+reviewed the code and results, and verified them through the unit tests and an automated check of
+every number in the paper against the generated data. The author takes full responsibility for the
+content of this manuscript.
 
 %=====================================================================
 \section{Custody Horizon: Definition and Computation}\label{sec:custody-def}
@@ -224,9 +253,10 @@ propagated three ways:
       dynamics, used as the reference.
 \end{itemize}
 The samples are projected onto the geocentric sky. For a search pattern of $N$ square fields of
-view of side $\phi$, whose equal-area radius is $r_N = \phi\sqrt{N/\pi}$, the custody horizon is
+view of side $\phi$, whose equal-area radius is $r_N = \phi\sqrt{N/\pi}$, the custody horizon is the
+first gap at which less than 99\,\% of the probability mass lies inside the search circle,
 \begin{equation}
-\Tc(N) = \max\left\{\Delta t : \Pr\left[\angle(\hat{\vect u}_{\mathrm{target}}, \hat{\vect c}) \le r_N\right] \ge 0.99\right\},
+\Tc(N) = \min\left\{\Delta t : \Pr\left[\angle(\hat{\vect u}_{\mathrm{target}}, \hat{\vect c}) \le r_N\right] < 0.99\right\},
 \end{equation}
 where $\hat{\vect c}$ is the centre of the search. Three variants use different centres or radii:
 \begin{itemize}
@@ -247,18 +277,17 @@ Because $\Tc$ is the \emph{first} gap at which the 99\,\% radius exceeds $r_N$, 
 resolve short excursions of the sky radius. On the NRHO the radius spikes at every perilune
 passage (every 6.56\,d), when the along-track uncertainty is stretched as the object sweeps past
 the Moon, and then shrinks again. The horizon is interpolated between grid points in log--log
-coordinates. For 17
-representative arcs, refining the grid to a uniform 0.02-d step changes $\Tc$ by a median of at
+coordinates. For 17 representative arcs, refining the grid to a uniform 0.02-d step changes $\Tc$ by a median of at
 most 0.03\,d, by at most 0.15\,d for $N = 1$ and 10, and by at most 0.17\,d for $N = 100$.
 
 The post-fit covariance at the gap start is the Cram\'er--Rao lower bound (CRLB) of the preceding
 tracking arc of 1, 3 or 7\,days:
 \begin{equation}
-\mathcal I(t_0) = \Lambda_0 + \sum_k \Phi(t_k,t_0)^\top H_k^\top R^{-1} H_k \Phi(t_k,t_0),\qquad
+\mathcal I(t_0) = \Lambda_0 + \sum_k \Phi(t_k,t_0)^\top H_k^\top R_k^{-1} H_k \Phi(t_k,t_0),\qquad
 P_0 = \Phi(t_e,t_0)\,\mathcal I^{-1}\,\Phi(t_e,t_0)^\top ,
 \end{equation}
 built from the actual visible measurements, with the gap starting at the arc's last measurement
-$t_e$. Here $H_k$ is the Jacobian of right ascension and declination, $R$ the measurement noise
+$t_e$. Here $H_k$ is the Jacobian of right ascension and declination, $R_k$ the measurement noise
 covariance ($\mathrm{diag}(\sigma^2/\cos^2\delta_k, \sigma^2)$ with $\sigma = 1''$, the same model as in the
 simulated measurements and the filters), and $\Lambda_0$ a weak regularising prior ($10^5$\,km, 1\,km\,s$^{-1}$). An arc is
 counted as observable when the resulting position bound is finite and below this prior.
@@ -422,8 +451,8 @@ synodic planes. Grey dots are PF particles; EKF and UKF $3\sigma$ ellipses and G
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{Fig7}
-\caption{Share of reacquisition runs ending consistent, by filter and orbit (100 runs each); error
-bars are 95\,\% Wilson intervals}\label{fig:reacq}
+\caption{Share of reacquisition runs ending consistent, by filter and orbit (100 runs each; initial
+gaps of 1.9--3.2\,d); error bars are 95\,\% Wilson intervals}\label{fig:reacq}
 \end{figure}
 
 %=====================================================================
@@ -789,7 +818,7 @@ Six rules follow from the results.
 Because the operator horizon matches the ideal one, these horizons are achievable by an operator who
 centres the search on a UKF prediction. The stability index gives a first screening of a catalogue: in
 this study, members with $\nu < 3$ kept custody beyond 30\,days after 7-day arcs, while members with
-$\nu > 10$ needed re-observation within two to four weeks (Section~\ref{sec:families}). For the
+$\nu > 10$ needed re-observation within about 13--25\,days (Section~\ref{sec:families}). For the
 individual arc, the UT predictor tracks the Monte Carlo horizon closely for $N \le 10$ and could be
 evaluated inside a tasking scheduler for every catalogued object at negligible cost.
 
@@ -849,25 +878,22 @@ in a DE440 ephemeris model with solar radiation pressure.
 
 %=====================================================================
 \bmhead{Acknowledgements}
-%% Acknowledgements (supervisor, colleagues, computing). JAS places them on the title page.
 None.
 
 \section*{Declarations}
 
 \bmhead{Funding}
-%% CHECK: state any fellowship or grant that supported the author.
 The author did not receive support from any organization for the submitted work.
 
 \bmhead{Competing interests}
 The author has no relevant financial or non-financial interests to disclose.
 
 \bmhead{Data and code availability}
-%% CHECK: make the repository public and insert the Zenodo DOI before submission.
 The code (CR3BP and ephemeris dynamics, sensor model, estimators, custody analysis and unit tests),
 the scripts that regenerate every figure and table, the generated data, and a script that checks
 every number in this paper against those data are available in the \texttt{cislunar-custody}
-repository (\url{https://github.com/Bishwaswarup/cislunar-custody}), archived at Zenodo
-(\url{https://doi.org/10.5281/zenodo.XXXXXXX}).
+repository (\url{https://github.com/Bishwaswarup/cislunar-custody}) and archived at Zenodo
+(\url{https://doi.org/10.5281/zenodo.23075048}); release v1.1.0 corresponds to this paper.
 
 \bmhead{Author contributions}
 B.N. conceived the study, developed the software, performed the analysis and wrote the manuscript.

@@ -13,6 +13,7 @@ Target journal: *The Journal of the Astronautical Sciences* (Springer). Build th
 - [x] At most three heading levels, all numbered.
 - [x] Declarations: funding, competing interests, data and code availability, author
       contributions, ethics.
+- [x] Related work expanded (1 Oct): 35 references; the 10 new ones (cislunar SDA surveys, space- and ground-based observation geometry, uncertainty propagation and realism) were checked against Crossref, DTIC and AFRL.
 - [x] References have DOIs where one exists. They were checked against Crossref and publisher
       pages. Jo et al. is updated to the 2026 *Astrodynamics* paper, and Iannamorelli & LeGrand to
       JAS 72(1) 2025.
