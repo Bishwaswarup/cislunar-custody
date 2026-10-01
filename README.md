@@ -17,7 +17,7 @@ A computational study of NRHO, halo, Lyapunov and DRO orbits in the Earth–Moon
 ![Claims](https://img.shields.io/badge/paper%20claims-0%20FAIL-2ea44f)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 ![IISc](https://img.shields.io/badge/IISc-Bangalore-d9480f)
-![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23075049.svg)](https://doi.org/10.5281/zenodo.23075049)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23075049.svg)](https://doi.org/10.5281/zenodo.23075049)
 
 **Bishwaswarup Nayak** · Indian Institute of Science, Bangalore · independent project
 
