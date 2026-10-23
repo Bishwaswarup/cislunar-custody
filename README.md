@@ -29,7 +29,7 @@ A computational study of NRHO, halo, Lyapunov and DRO orbits in the Earth–Moon
 
 **A cislunar object's custody is decided by how long it was tracked before the gap, not by the size of the search.**
 
-Seen from Earth, cislunar targets sit only **4–14° from the Moon**. The Moon's glare and the
+Seen from Earth, the targets studied stay **within 14° of the Moon**. The Moon's glare and the
 lunar phase therefore impose a monthly **8.5–15.7 day observation blackout** that no ground
 network or bigger telescope can close. We define the **custody horizon** as the longest gap
 after which the target is still inside the telescope search pattern with 99 % probability:
@@ -55,8 +55,8 @@ Propagating $P_0$ through gaps of 0.1–30 days (linear, unscented and Monte Car
 | :-- | :--: | :--: | :--: |
 | 9:2 NRHO (Gateway) | near-stable | **> 30 d** | 78 % / 100 % / 100 % |
 | DRO (~70 000 km) | stable | **> 30 d** | 85 % / 100 % / 100 % |
-| L1 halo ($A_z$ ≈ 30 000 km) | unstable | **11.0 / 13.2 / 16.5 d** | 89 % / 96 % / 100 % |
-| L2 Lyapunov | unstable | **12.5 / 14.9 / 17.4 d** | 74 % / 97 % / 100 % |
+| L1 halo ($A_z$ ≈ 30 000 km) | unstable | **10.9 / 13.2 / 16.4 d** | 89 % / 96 % / 100 % |
+| L2 Lyapunov | unstable | **12.3 / 14.9 / 17.3 d** | 76 % / 97 % / 100 % |
 
 The values are medians over arcs through the year (Tables 3 and 4 of the paper). Further findings:
 
@@ -65,11 +65,12 @@ The values are medians over arcs through the year (Tables 3 and 4 of the paper).
   fields. The orbit's finite-time Lyapunov exponent alone does **not** predict it (log-$R^2$ ≤ 0.04),
   because stretching only matters along the directions the post-fit covariance actually excites.
 - **The operator's horizon equals the ideal one.** Centring the search on the UT prediction instead
-  of the (unknowable) true mean gives the same $T_c$ (median ratio 1.00). Across 25 members of five
-  orbit families, $T_c$ falls steadily with the stability index ν (Spearman ρ = −0.92 for ν > 10).
+  of the (unknowable) true mean gives the same $T_c$ (median ratio 1.00). Across 30 members of five
+  orbit families, $T_c$ falls steadily with the stability index ν (Spearman ρ = −0.92 for ν > 10,
+  3-day arcs).
 - **Linear prediction gives false custody.** After 14 days on the L1 halo, an EKF-style 99 %
-  ellipse contains only **5.4 %** of the true probability (12.6 % in the ephemeris model), against
-  **98 %** for the UT ellipse. The UT claims too long a horizon in only 2 of 254 arcs.
+  ellipse contains only **5.3 %** of the true probability (12.0 % in the ephemeris model), against
+  **98 %** for the UT ellipse. The UT claims too long a horizon in only 2 of 253 arcs.
 - **Watch the NRHO perilune.** The NRHO's sky-plane uncertainty swells at every perilune passage
   (every 6.56 d) and shrinks again, so a single-field search can lose the target there briefly.
 - **Filter choice decides reacquisition.** After a 3.0-day gap on the L1 halo, the EKF ends consistent
@@ -77,7 +78,7 @@ The values are medians over arcs through the year (Tables 3 and 4 of the paper).
   **Gaussian-mixture UKF in 100 %**.
 
 All of this holds in a **JPL DE440 ephemeris model with solar radiation pressure**, where each
-orbit is transitioned by multiple shooting (horizon ratio 0.93–1.01).
+orbit is transitioned by multiple shooting (median horizon ratio 0.93–1.00).
 
 ---
 
@@ -128,7 +129,7 @@ flowchart LR
 | **Dynamics** | Earth–Moon CR3BP ($\mu$ = 0.0121505842), STM verified to $3\times10^{-10}$. Families built from Richardson seeds by differential correction and pseudo-arclength continuation. 9:2 NRHO: $T$ = 6.5624 d, perilune 3249 km, apolune 71 222 km. |
 | **Sensors** | Hanle · La Palma · Haleakala · Siding Spring. Twilight, 20° elevation, Moon exclusion and occultation, shadows, Lambertian photometry, Krisciunas–Schaefer moonlight. |
 | **Estimation** | Fisher information from the real visible schedule. EKF, UKF, GM-UKF (entropy-triggered splits along the max-stretch direction), regularised PF with progressive correction and a UKF handover. |
-| **Custody** | Post-fit covariance through 0.1–30 d gaps (121-point grid, converged to 0.15 d). Ideal, actual and claimed horizons; UT-centred circle and ellipse-aligned strip searches; Gaussian containment; FTLE vs UT predictors; 525 cases (394 distinct arcs). |
+| **Custody** | Post-fit covariance through 0.1–30 d gaps (121-point grid, converged to 0.15 d). Ideal, actual and claimed horizons; UT-centred circle and ellipse-aligned strip searches; Gaussian containment; FTLE vs UT predictors; 523 cases (393 distinct arcs). |
 | **Ephemeris** | DE440 Sun and Moon + cannonball SRP, exact gravity-gradient STM, Levenberg–Marquardt + Newton multiple shooting. |
 
 ---
@@ -150,7 +151,7 @@ git clone https://github.com/Bishwaswarup/cislunar-custody.git && cd cislunar-cu
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev,ephem]"
 curl -o data/de440s.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp
-pytest                                    # 52 tests, ~15 s
+pytest                                    # 59 tests (55 without the DE440 kernel), ~30 s
 ```
 
 <details>
@@ -195,7 +196,7 @@ src/cislunar_custody/
 ├── plotstyle.py     journal figure style (fonts, widths, FigN export)
 └── ephem/           DE440, ephemeris + SRP dynamics, multiple shooting
 scripts/             one script per milestone
-tests/               52 pytest tests
+tests/               59 pytest tests
 .github/workflows/   CI: pytest on Python 3.10–3.14 with the DE440 kernel
 paper/               LaTeX manuscript for JAS (Springer sn-jnl template: main.tex, references.bib)
 ```
@@ -226,13 +227,13 @@ longer states it). Current report: `data/claims_report.txt`.
 
 | Check | What it tests |
 | :-- | :-- |
-| Claim verifier | ~217 numbers in text and tables against the saved study outputs (0 FAIL, 6 WEAK) |
+| Claim verifier | 283 numbers in text and tables against the saved study outputs (0 FAIL, 9 WEAK; `data/claims_report.txt`) |
 | Confidence intervals | 95 % Wilson intervals on filter success rates and blackout survival; Fisher exact tests between filters |
 | Bootstrap | 95 % intervals on every log-R² of the custody-horizon predictors |
-| Distinct arcs | pooled statistics count each tracking arc once (131 of the 525 cases repeat an arc) |
+| Distinct arcs | pooled statistics count each tracking arc once (130 of the 523 cases repeat an arc) |
 | Monte Carlo convergence | `sensitivity_check.py`: 300 vs 2000 samples change T_c by a median 0.09–0.14 d, at most 0.9 d for N = 10 and 100 |
 | Grid convergence | 121-point gap grid vs a uniform 0.02-d grid: T_c changes by at most 0.15 d (N = 1, 10) and 0.6 d (N = 100) |
-| Continuous integration | GitHub Actions runs the 52 tests on Python 3.10–3.14 on every push |
+| Continuous integration | GitHub Actions runs the 59 tests on Python 3.10–3.14 on every push |
 | Run count | reacquisition re-run with 100 Monte Carlo runs per filter (was 10) |
 | Operator horizon | T_c with the search centred on the UT prediction (circle and ellipse-aligned strip), not on the true mean |
 | Family sweep | T_c for members of all five families, with random orbital phase, against stability index |
@@ -246,8 +247,9 @@ longer states it). Current report: `data/claims_report.txt`.
 - [x] Manuscript in the Springer template, figures to JAS specifications (`paper/`, `figures/jas/`)
 - [x] Claim verifier, sample-size check, confidence intervals
 - [x] Operator horizon and family sweep: code, fig18–19, grid refinement (milestone 8)
-- [ ] Operator horizon as the headline metric and family sweep in the paper
-- [ ] Consider covariance (measurement bias, timing, SRP uncertainty) and filter-derived post-fit covariance
+- [x] Operator horizon as the headline metric and family sweep in the paper
+- [x] Consider covariance (site biases, clock offsets, SRP errors) in the paper
+- [ ] Filter-derived post-fit covariance in place of the Cramér–Rao bound
 - [ ] Submission to *The Journal of the Astronautical Sciences*
 - [ ] Real-data validation with Indian observatories (IIA Hanle, ARIES Devasthal, GROWTH-India)
 - [ ] Custody-aware sensor tasking using the UT-predicted $T_c$
