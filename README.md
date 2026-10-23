@@ -72,8 +72,9 @@ The values are medians over arcs through the year (Tables 3 and 4 of the paper).
   **98 %** for the UT ellipse. The UT claims too long a horizon in only 2 of 254 arcs.
 - **Watch the NRHO perilune.** The NRHO's sky-plane uncertainty swells at every perilune passage
   (every 6.56 d) and shrinks again, so a single-field search can lose the target there briefly.
-- **Filter choice decides reacquisition.** After a 3.2-day gap on the L1 halo, the EKF ends consistent
-  in 25 % of 100 runs, the UKF in 55 %, a particle filter in 91 % and a **Gaussian-mixture UKF in 99 %**.
+- **Filter choice decides reacquisition.** After a 3.0-day gap on the L1 halo, the EKF ends consistent
+  in 37 % of 100 runs, the UKF in 77 %, a particle filter with UKF handover in 88 % and a
+  **Gaussian-mixture UKF in 100 %**.
 
 All of this holds in a **JPL DE440 ephemeris model with solar radiation pressure**, where each
 orbit is transitioned by multiple shooting (horizon ratio 0.93–1.01).
@@ -100,7 +101,7 @@ orbit is transitioned by multiple shooting (horizon ratio 0.93–1.01).
 <td><img src="figures/fig19_operator_vs_ideal.png"><br><sub><b>Operator vs ideal.</b> Horizon with the search centred on the UT prediction (circle, strip) against the true-mean horizon.</sub></td>
 </tr>
 <tr>
-<td><img src="figures/fig10_prior_cloud.png"><br><sub><b>After a 3.2-day gap.</b> Particles vs EKF/UKF ellipses vs GM-UKF components (L1 halo).</sub></td>
+<td><img src="figures/fig10_prior_cloud.png"><br><sub><b>After a 3.0-day gap.</b> Particles vs EKF/UKF ellipses vs GM-UKF components (L1 halo).</sub></td>
 <td><img src="figures/fig16_tc_cr3bp_vs_ephemeris.png"><br><sub><b>Ephemeris check.</b> Custody horizon in the CR3BP vs DE440 + SRP.</sub></td>
 </tr>
 </table>
@@ -137,7 +138,7 @@ flowchart LR
 > 1. **Shrink the Moon-exclusion angle before growing the aperture.** At 10° exclusion, L1/L2 targets are never visible; at 5°, 21–33 % of the year.
 > 2. **Track at least 3 (preferably 7) days before every predicted blackout.** Extra sites do not remove it.
 > 3. **Plan searches with unscented or Gaussian-mixture prediction.** On the L1 halo, linear prediction is safe only for gaps shorter than about 10 days.
-> 4. **Reacquire with a Gaussian-mixture filter.** It costs about 2× a UKF and was the only filter to reacquire at least 99 % of runs.
+> 4. **Reacquire with a Gaussian-mixture filter.** It costs about 2× a UKF and reacquired all 100 runs in the L1 halo study.
 > 5. **On the NRHO, time narrow searches away from perilune**, where the sky-plane uncertainty briefly swells.
 
 ---
